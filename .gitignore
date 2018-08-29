@@ -1,0 +1,6 @@
+.idea
+*.log
+*cdslck*
+*.pyc
+*~
+__pycache__
