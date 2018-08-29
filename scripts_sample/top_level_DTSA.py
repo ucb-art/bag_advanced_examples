@@ -22,6 +22,28 @@ def make_tdb(prj, target_lib, specs):
 
 
 def generate(prj, specs, gen_layout=True, gen_sch=False, run_lvs=False, run_rcx=False):
+    """
+    Creates the layout instance.
+    Generates the layout and schematic based on the passed arguments. Optionally runs LVS and PEX/extraction.
+    Parameters
+    ----------
+    prj :
+        the BAG project
+    specs :
+        the specs from the yaml file
+    gen_layout : bool
+        true to generate the layout
+    gen_sch : bool
+        true to generate the schematic
+    run_lvs : bool
+        true to run LVS
+    run_rcx :
+        true to run post layout extraction
+
+    Returns
+    -------
+
+    """
     # Get information from YAML
     params = specs['params']
 
@@ -135,7 +157,7 @@ def configure_and_run(prj, specs, dsn_name, run=False):
 
 
 if __name__ == '__main__':
-    with open('advanced_features_demo/sample_specs/Sample_DTSA.yaml', 'r') as f:
+    with open('bag_advanced_examples/specs_sample/DTSA.yaml', 'r') as f:
         block_specs = yaml.load(f)
 
     local_dict = locals()

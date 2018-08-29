@@ -24,11 +24,14 @@
 
 
 """
+########################################################################################################################
+    README
+
     This is the layout generator for Double Tail Sense Amplifier (DTSA)
 
     This generator uses a particular coding style in an attempt to organize all the parameters and simplify the
     complexity of the schematic and layout generator codes.
-    It is by no means a necessary style when using BAG
+    The style/use of row/transistor data structures are by no means a necessary style when using BAG
     In particular:
         - Transistor information (row, column location, size, orientation, etc) are stored in per-transistor
         dictionaries
@@ -36,7 +39,7 @@
         - Lists of the rows in this analogBase class are used to store information about rows
         - Many helper functions are defined to simplify the placement/alignment of transistors
         - Transistor ports ('s', 'd', 'g') are stored in the transistor dictionaries to make access more intuitive
-
+########################################################################################################################
 """
 
 from __future__ import (absolute_import, division,
@@ -463,10 +466,10 @@ class DoubleTailSenseAmplifier(AnalogBase):
                                     target_tx,  # type: Dict
                                     source_tx,  # type: Dict
                                     seff_dir,  # type: int
-                                    aligned=True,  # type: Optional[bool]
+                                    aligned=True,  # type: bool
+                                    deff_dir=None,  # type: Optional[int]
                                     ):
         # type: (...) -> None
-        # TODO: Cant assume that drain direction is opposite of source... then where does gate align
         """
         Align the source/drain position (is source or drain leftmost diffusion) to a reference transistor
         Also assign the source and drain connection directions (up/down)
@@ -478,20 +481,23 @@ class DoubleTailSenseAmplifier(AnalogBase):
         source_tx : Dict
             the reference transistor whose source/drain alignment should be matched
         seff_dir : int
-            the connection direction of the effective source for the target direction (0 for down, 2 for up,
+            the connection direction of the effective source for the target transistor (0 for down, 2 for up,
             1 for middle)
         aligned : bool
             True to have the target transistor's s/d connection be aligned with the source transistor.
             False to have s_target align with d_source and d_target align with s_source
+        deff_dir : Optional[int]
+            if specified, sets the connection direction of the effective drain for the target transistor.
+            If not specified, drain direction is assumed to be opposite to the source direction
 
         Returns
         -------
 
         """
         if (target_tx['fg'] - source_tx['fg']) % 4 == 0 and aligned is True:
-            self.set_tx_directions(target_tx, source_tx['seff'], seff_dir)
+            self.set_tx_directions(target_tx, source_tx['seff'], seff_dir, deff_dir)
         else:
-            self.set_tx_directions(target_tx, source_tx['deff'], seff_dir)
+            self.set_tx_directions(target_tx, source_tx['deff'], seff_dir, deff_dir)
 
     def get_tracks(self):
         # type: (...) -> Dict[str, Dict[str, List]]
@@ -502,12 +508,6 @@ class DoubleTailSenseAmplifier(AnalogBase):
         Returns
         -------
 
-        """
-        """
-        Returns a dict of 'nch' and 'pch' where nch and pch are themselves dicts of 'ds' or 'g' track types,
-        where 'ds' and 'g' contain list of number of tracks from bottom to top of all transistors matching tx type
-        and track type
-        :return:
         """
         nds = []
         ng = []
@@ -545,6 +545,7 @@ class DoubleTailSenseAmplifier(AnalogBase):
         return self.wire_names
 
     def draw_layout(self):
+        # Get parameters from the parameter dictionary
         top_layer = self.params['top_layer']
         tr_widths = self.params['tr_widths']
         tr_spaces = self.params['tr_spaces']
@@ -558,23 +559,37 @@ class DoubleTailSenseAmplifier(AnalogBase):
         self._seg_dict = self.params['seg_dict']
         fg_dum = self.params['fg_dum']
 
+        # Define what layers will be used for horizontal and vertical connections
         horz_conn_layer = self.mos_conn_layer + 1
         vert_conn_layer = self.mos_conn_layer + 2
 
         ################################################################################
-        # 0:
-        # Floorplan the design, to know where transistors go and where the horizontal
+        # 0:   Floorplan the design
+        #
+        # Know where transistors go and where the horizontal
         # and vertical connections will be
+        # Also determine how transistors will be aligned horizontally relative to eachother
+        # and know how things will need to shift as various sizes scale
         ################################################################################
 
         ################################################################################
-        # 1:
-        # - Use TrackManager to create allocate track and spacing based on the floorplan
-        # - Initialize the rows using the helper functions above
+        # 1:   Set up track allocations for each row
+        #
+        # Use TrackManager to create allocate track and spacing based on the floorplan
+        #   -  Rather than explicitly allocate a number of gate and source/drain tracks for each row (as is done in
+        #      the bootcamp modules), instead define a list of what horizontal connects will be required for each row.
+        #   -  Based on spacing and width rules provided in the specification file, BAG/trackmanager will calculate
+        #      how many tracks each row needs
+        # Finally, initialize the rows using the helper functions above
         ################################################################################
         tr_manager = TrackManager(grid=self.grid, tr_widths=tr_widths, tr_spaces=tr_spaces)
 
         # Rows are ordered from bottom to top
+        # To use TrackManager, an ordered list of wiring types and their locations must be provided.
+        # Define two lists, one for the nch rows and one for the pch rows
+        # The lists are composed of dictionaries, one per row.
+        # Each dictionary has two list entries (g and ds), which are ordered lists of what wire types will be present
+        #  in the g and ds sections of that row. Ordering is from bottom to top of the design.
         wire_names = dict(
             nch=[
                 # Pre-amp tail row
@@ -608,6 +623,8 @@ class DoubleTailSenseAmplifier(AnalogBase):
         )
 
         # Set up the row information
+        # Row information contains the row properties like width/number of fins, orientation, intent, etc.
+        # Storing in a row dictionary/object allows for convenient fetching of data in later functions
         row_tail = self.initialize_rows(row_name='tail',
                                         orient='R0',
                                         nch_or_pch='nch',
@@ -629,15 +646,24 @@ class DoubleTailSenseAmplifier(AnalogBase):
                                             nch_or_pch='pch',
                                             )
 
+        # Define the order of the rows (bottom to top) for this analogBase cell
         self.set_global_rows(
             [row_tail, row_pre_in, row_regen_n, row_regen_p, row_pre_load]
         )
 
+        ################################################################################
+        # 2:
         # Initialize the transistors in the design
+        # Storing each transistor's information (name, location, row, size, etc) in a dictionary object allows for
+        # convient use later in the code, and also greatly simplifies the schematic generation
+        # The initialization sets the transistor's row, width, and source/drain net names for proper dummy creation
+        ################################################################################
         tail_1 = self.initialize_tx(name='tail_1', row=row_tail, fg_spec='tail_n', deff_net='PRE_AMP_SOURCE')
         tail_2 = self.initialize_tx(name='tail_2', row=row_tail, fg_spec='tail_n', deff_net='PRE_AMP_SOURCE')
-        in_p = self.initialize_tx(name='in_p', row=row_pre_in, fg_spec='in_n', seff_net='PRE_AMP_SOURCE', deff_net='DIN')
-        in_n = self.initialize_tx(name='in_n', row=row_pre_in, fg_spec='in_n', seff_net='PRE_AMP_SOURCE', deff_net='DIP')
+        in_p = self.initialize_tx(name='in_p', row=row_pre_in, fg_spec='in_n',
+                                  seff_net='PRE_AMP_SOURCE', deff_net='DIN')
+        in_n = self.initialize_tx(name='in_n', row=row_pre_in, fg_spec='in_n',
+                                  seff_net='PRE_AMP_SOURCE', deff_net='DIP')
         pre_load_p = self.initialize_tx(name='pre_load_p', row=row_pre_load, fg_spec='pre_load_p', deff_net='DIN')
         pre_load_n = self.initialize_tx(name='pre_load_n', row=row_pre_load, fg_spec='pre_load_p', deff_net='DIP')
         regen_n_p = self.initialize_tx(name='regen_n_p', row=row_regen_n, fg_spec='regen_n', deff_net='VOP')
@@ -651,7 +677,7 @@ class DoubleTailSenseAmplifier(AnalogBase):
         reset_p = self.initialize_tx(name='reset_p', row=row_regen_n, fg_spec='reset_n', deff_net='VOP')
         reset_n = self.initialize_tx(name='reset_n', row=row_regen_n, fg_spec='reset_n', deff_net='VON')
 
-        # Compose a list of all the transistors
+        # Compose a list of all the transistors so it can be iterated over later
         transistors = [
             tail_1, tail_2, in_p, in_n, pre_load_p, pre_load_n, regen_n_p, regen_n_n,
             regen_p_p, regen_p_n, tail_p_1, tail_p_2, reset_p, reset_n
@@ -664,27 +690,36 @@ class DoubleTailSenseAmplifier(AnalogBase):
                     "Transistors must have even number of fingers. Transistor '{}' has {}".format(tx['name'], tx['fg]'])
                 )
 
+        ################################################################################
+        # 3:   Calculate transistor locations
         # Based on the floorplan, want the tail, input, nmos regen, pmos regen, and pmos tail to be in a column
         # and for convenience, place the reset and load in a column, but right/left justified
         # Notation:
         #     fg_xxx refers to how wide (in fingers) a transistor or column of transistors is
         #     col_xxx refers to the location of the left most finger of a transistor or a column of transistors
+        ################################################################################
 
         fg_stack = max(tail_1['fg'], in_p['fg'], regen_n_p['fg'], regen_p_p['fg'], tail_p_1['fg'])
         fg_side = max(reset_p['fg'], pre_load_p['fg'])
+
         # Add an explicit gap in the middle for symmetry. Set to 0 to not have gap
         fg_mid = 0
+
         # Get the minimum gap between fingers of different transistors
+        # This varies between processes, so avoid hard-coding by using the method in self._tech_cls
         fg_space = self._tech_cls.get_min_fg_sep(lch)
 
         fg_total = fg_dum + fg_side + fg_space + fg_stack + fg_mid + fg_space + fg_stack + fg_space + fg_side + fg_dum
 
+        # Calculate the starting column index for each stack of transistors
         col_side_left = fg_dum
         col_stack_left = col_side_left + fg_side + fg_space
         col_stack_right = col_stack_left + fg_stack + fg_space + fg_mid
         col_side_right = col_stack_right + fg_stack + fg_space
 
         # Calculate positions of transistors
+        # This uses helper functions to place each transistor within a stack/column of a specified starting index and
+        # width, and with a certain alignment (left, right, centered) within that column
         self.assign_tx_column(tx=tail_1, offset=col_stack_left, fg_col=fg_stack, align=0)
         self.assign_tx_column(tx=in_n, offset=col_stack_left, fg_col=fg_stack, align=0)
         self.assign_tx_column(tx=regen_n_n, offset=col_stack_left, fg_col=fg_stack, align=0)
@@ -703,7 +738,18 @@ class DoubleTailSenseAmplifier(AnalogBase):
         self.assign_tx_column(tx=reset_p, offset=col_side_right, fg_col=fg_side, align=-1)
         self.assign_tx_column(tx=pre_load_p, offset=col_side_right, fg_col=fg_side, align=-1)
 
-        # Assign the transistor directions (s/d up vs down)
+        ################################################################################
+        # 4:  Assign the transistor directions (s/d up vs down)
+        #
+        # Specify the directions that connections to the source and connections to the drain will go (up vs down)
+        # Doing so will also determine how the gate is aligned (ie will it be aligned to the source or drain)
+        # See the bootcamp for more details
+        # The helper functions used here help to abstract away whether the intended source/drain diffusion region of
+        # a transistor occurs on the even or odd columns of that device (BAG always considers the even columns of a
+        # device to be the 's').
+        # These helper functions allow a user to specify whether the even columns should be the transistors effective
+        #  source or effective drain, so that the user does not need to worry about BAG's notation.
+        ################################################################################
 
         # Set tail transistor to have source on the leftmost diffusion (arbitrary) and source going down
         self.set_tx_directions(tx=tail_1, seff='s', seff_dir=0)
@@ -729,6 +775,14 @@ class DoubleTailSenseAmplifier(AnalogBase):
         self.assign_tx_matched_direction(target_tx=tail_p_2, source_tx=regen_p_n, seff_dir=2, aligned=False)
         self.set_tx_directions(tx=reset_n, seff='s', seff_dir=0)
         self.set_tx_directions(tx=pre_load_n, seff='s', seff_dir=2)
+
+        ################################################################################
+        # 5:  Draw the transistor rows, and the transistors
+        #
+        # All the difficult setup has been complete. Drawing the transistors is simple now.
+        # Note that we pass the wire_names dictionary defined above so that BAG knows how to space out
+        # the transistor rows. BAG uses this to calculate how many tracks to allocate to each
+        ################################################################################
 
         # Draw the transistor row bases
         self.draw_base(lch, fg_total, self._ptap_w, self._ntap_w,
@@ -756,6 +810,13 @@ class DoubleTailSenseAmplifier(AnalogBase):
             tx['d'] = tx['ports'][tx['deff']]
             tx['g'] = tx['ports']['g']
 
+        ################################################################################
+        # 6:  Define horizontal tracks on which connections will be made
+        #
+        # Based on the wire_names dictionary defined in step 1), create TrackIDs on which horizontal connections will
+        #  be made
+        ################################################################################
+
         tid_pream_tail = self.get_wire_id('nch', row_tail['index'], 'ds', wire_name='bias')
         tid_d = self.get_wire_id('nch', row_pre_in['index'], 'ds', wire_name='sig')
         tid_reset_gate = self.get_wire_id('nch', row_regen_n['index'], 'g', wire_name='sig')
@@ -769,6 +830,21 @@ class DoubleTailSenseAmplifier(AnalogBase):
         tid_sig_in_horz = self.get_wire_id('nch', row_pre_in['index'], 'g', wire_name='sig')
         tid_preamp_load_d = self.get_wire_id('pch', row_pre_load['index'], 'ds', wire_name='sig')
 
+        ################################################################################
+        # 7:  Perform wiring
+        #
+        # Use the self.connect_to_tracks, self.connect_differential_tracks, self.connect_wires, etc
+        #  to perform connections
+        # Note that the drain/source/gate wire arrays of the transistors can be easily accessed as keys in the tx
+        # dictionary structure.
+        #
+        # Best practice:
+        #  - Avoid hard-coding widths and pitches
+        #    Instead, use TrackManger's get_width, get_space, or get_next_track functionality to make the design
+        #    fully portable across process
+        #  - Avoid hard-coding which layers connections will be on.
+        #    Instead use layers relative to self.mos_conn_layer
+        ################################################################################
         # Connect pre-amp tail drain to input source
         self.connect_to_tracks(
             [tail_1['d'], tail_2['d'], in_p['s'], in_n['s']],
@@ -982,6 +1058,13 @@ class DoubleTailSenseAmplifier(AnalogBase):
             unit_mode=True
         )
 
+        ################################################################################
+        # 8:  Connections to substrate, and dummy fill
+        #
+        # - Use the self.connect_to_substrate method to perform wiring to the ntap and ptap where VDD and VSS will be
+        # - Use self.fill_dummy() draw the dummy transistor structures, and finalize the VDD and VSS wiring
+        #   - This method should be called last!
+        ################################################################################
         # Connections to VSS
         self.connect_to_substrate(
             'ptap',
@@ -996,6 +1079,10 @@ class DoubleTailSenseAmplifier(AnalogBase):
 
         warr_vss, warr_vdd = self.fill_dummy()
 
+        ################################################################################
+        # 9:  Add pins
+        #
+        ################################################################################
         self.add_pin('VDD', warr_vdd, show=show_pins)
         self.add_pin('VSS', warr_vss, show=show_pins)
         self.add_pin('VIP', warr_in_p_vert, show=show_pins)
@@ -1007,6 +1094,13 @@ class DoubleTailSenseAmplifier(AnalogBase):
         self.add_pin('DIP', warr_d_p, show=show_pins)
         self.add_pin('DIN', warr_d_n, show=show_pins)
 
+        ################################################################################
+        # 10:  Organize parameters for the schematic generator
+        #
+        # To make the schematic generator very simple, organize the required transistor information (fins/widith,
+        # intent, and number of fingers) into a convenient data structure
+        # Finally set the self._sch_params property so that these parameters are accessible to the schematic generator
+        ################################################################################
         # Define transistor properties for schematic
         tx_info = {}
         for tx in transistors:
