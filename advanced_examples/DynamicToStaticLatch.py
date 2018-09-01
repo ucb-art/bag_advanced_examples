@@ -770,8 +770,8 @@ class DynamicToStaticLatch(AnalogBase):
             ports_r_in = [inv1n['g'], latch2_nk2['g']]
             ports_s_in = [inv2n['g'], latch1_nk2['g']]
         else:
-            ports_r_in = [inv1n['g'], latch1_nk2['g']]
-            ports_s_in = [inv2n['g'], latch2_nk2['g']]
+            ports_r_in = [inv1n['g'], latch1_n['g']]
+            ports_s_in = [inv2n['g'], latch2_n['g']]
 
         (warr_r_in, warr_s_in) = self.connect_differential_tracks(
             pwarr_list=ports_r_in, nwarr_list=ports_s_in,
@@ -960,21 +960,23 @@ class DynamicToStaticLatch(AnalogBase):
             # 2) Define vertical track
             tid_l1n_vert = TrackID(
                 layer_id=vert_conn_layer,
-                track_idx=self.grid.coord_to_nearest_track(
+                track_idx=tr_manager.get_next_track(
                     layer_id=vert_conn_layer,
-                    coord=warr_l1n_g_h.middle_unit,
-                    mode=-1,
-                    unit_mode=True
+                    cur_idx=tid_l1p_vert.base_index,
+                    cur_type='sig',
+                    next_type='sig',
+                    up=False
                 ),
                 width=tr_manager.get_width(layer_id=vert_conn_layer, track_type='sig')
             )
             tid_l2n_vert = TrackID(
                 layer_id=vert_conn_layer,
-                track_idx=self.grid.coord_to_nearest_track(
+                track_idx=tr_manager.get_next_track(
                     layer_id=vert_conn_layer,
-                    coord=warr_l2n_g_h.middle_unit,
-                    mode=1,
-                    unit_mode=True
+                    cur_idx=tid_l2p_vert.base_index,
+                    cur_type='sig',
+                    next_type='sig',
+                    up=True
                 ),
                 width=tr_manager.get_width(layer_id=vert_conn_layer, track_type='sig')
             )
@@ -983,14 +985,14 @@ class DynamicToStaticLatch(AnalogBase):
                 [warr_r_in_b, warr_l1n_g_h],
                 tid_l1n_vert,
                 min_len_mode=0,
-                track_upper=max([tid.get_bounds(self.grid, unit_mode=True)[0] for tid in [tid_r_in_b, tid_s_in_b]]),
+                track_upper=max([tid.get_bounds(self.grid, unit_mode=True)[1] for tid in [tid_r_in_b, tid_s_in_b]]),
                 unit_mode=True
             )
             self.connect_to_tracks(
                 [warr_s_in_b, warr_l2n_g_h],
                 tid_l2n_vert,
                 min_len_mode=0,
-                track_upper=max([tid.get_bounds(self.grid, unit_mode=True)[0] for tid in [tid_r_in_b, tid_s_in_b]]),
+                track_upper=max([tid.get_bounds(self.grid, unit_mode=True)[1] for tid in [tid_r_in_b, tid_s_in_b]]),
                 unit_mode=True
             )
         else:
@@ -1050,21 +1052,23 @@ class DynamicToStaticLatch(AnalogBase):
             # 2) Define vertical track
             tid_l1n_vert = TrackID(
                 layer_id=vert_conn_layer,
-                track_idx=self.grid.coord_to_nearest_track(
+                track_idx=tr_manager.get_next_track(
                     layer_id=vert_conn_layer,
-                    coord=warr_l1nk2_g_h.middle_unit,
-                    mode=-1,
-                    unit_mode=True
+                    cur_idx=tid_l1p_vert.base_index,
+                    cur_type='sig',
+                    next_type='sig',
+                    up=False
                 ),
                 width=tr_manager.get_width(layer_id=vert_conn_layer, track_type='sig')
             )
             tid_l2n_vert = TrackID(
                 layer_id=vert_conn_layer,
-                track_idx=self.grid.coord_to_nearest_track(
+                track_idx=tr_manager.get_next_track(
                     layer_id=vert_conn_layer,
-                    coord=warr_l2nk2_g_h.middle_unit,
-                    mode=1,
-                    unit_mode=True
+                    cur_idx=tid_l2p_vert.base_index,
+                    cur_type='sig',
+                    next_type='sig',
+                    up=True
                 ),
                 width=tr_manager.get_width(layer_id=vert_conn_layer, track_type='sig')
             )
@@ -1073,23 +1077,16 @@ class DynamicToStaticLatch(AnalogBase):
                 [warr_s_in_b, warr_l1nk2_g_h],
                 tid_l1n_vert,
                 min_len_mode=0,
-                track_upper=max([tid.get_bounds(self.grid, unit_mode=True)[0] for tid in [tid_r_in_b, tid_s_in_b]]),
+                track_upper=max([tid.get_bounds(self.grid, unit_mode=True)[1] for tid in [tid_r_in_b, tid_s_in_b]]),
                 unit_mode=True
             )
             self.connect_to_tracks(
                 [warr_r_in_b, warr_l2nk2_g_h],
                 tid_l2n_vert,
                 min_len_mode=0,
-                track_upper=max([tid.get_bounds(self.grid, unit_mode=True)[0] for tid in [tid_r_in_b, tid_s_in_b]]),
+                track_upper=max([tid.get_bounds(self.grid, unit_mode=True)[1] for tid in [tid_r_in_b, tid_s_in_b]]),
                 unit_mode=True
             )
-
-        self.add_pin('R_IN', warr_r_in)
-        self.add_pin('S_IN', warr_s_in)
-        self.add_pin('R_IN_B', warr_r_in_b)
-        self.add_pin('S_IN_B', warr_s_in_b)
-        self.add_pin('QM', warr_qm),
-        self.add_pin('QM_B', warr_qm_b)
 
         self.connect_to_substrate(
             'ptap',
