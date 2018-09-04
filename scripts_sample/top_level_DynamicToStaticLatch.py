@@ -157,7 +157,9 @@ def configure_and_run(prj, specs, dsn_name, run=False):
 
 
 if __name__ == '__main__':
-    with open('bag_advanced_examples/specs_sample/D2SLatch_latch.yaml', 'r') as f:
+    # with open('bag_advanced_examples/specs_sample/D2SLatch_latch.yaml', 'r') as f:
+    # with open('bag_advanced_examples/specs_sample/D2SLatch_inverter.yaml', 'r') as f:
+    with open('bag_advanced_examples/specs_sample/D2SLatch.yaml', 'r') as f:
         block_specs = yaml.load(f)
 
     local_dict = locals()
@@ -170,6 +172,6 @@ if __name__ == '__main__':
         bprj = local_dict['bprj']
     print("generating")
 
-    generate(bprj, block_specs, gen_layout=True, gen_sch=True, run_lvs=True, run_rcx=False)
+    generate(bprj, block_specs, gen_layout=True, gen_sch=False, run_lvs=False, run_rcx=False)
     # generate_tb(bprj, block_specs)
     # configure_and_run(bprj, block_specs, block_specs['impl_cell'], run=False)

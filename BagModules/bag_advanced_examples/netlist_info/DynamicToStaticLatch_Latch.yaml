@@ -48,7 +48,7 @@ instances:
     instpins:
       S:
         direction: inputOutput
-        net_name: "QM_B_CASC_N"
+        net_name: "QM_B_CASCODE_N"
         num_bits: 1
       D:
         direction: inputOutput
@@ -68,7 +68,7 @@ instances:
     instpins:
       S:
         direction: inputOutput
-        net_name: "QM_CASC_N"
+        net_name: "QM_CASCODE_N"
         num_bits: 1
       D:
         direction: inputOutput
@@ -92,7 +92,7 @@ instances:
         num_bits: 1
       D:
         direction: inputOutput
-        net_name: "QM_B_CASC_N"
+        net_name: "QM_B_CASCODE_N"
         num_bits: 1
       B:
         direction: inputOutput
@@ -132,7 +132,7 @@ instances:
         num_bits: 1
       D:
         direction: inputOutput
-        net_name: "QM_CASC_N"
+        net_name: "QM_CASCODE_N"
         num_bits: 1
       B:
         direction: inputOutput
@@ -192,7 +192,7 @@ instances:
         num_bits: 1
       D:
         direction: inputOutput
-        net_name: "QM_B_CASC_P"
+        net_name: "QM_B_CASCODE_P"
         num_bits: 1
       B:
         direction: inputOutput
@@ -232,7 +232,7 @@ instances:
         num_bits: 1
       D:
         direction: inputOutput
-        net_name: "QM_CASC_P"
+        net_name: "QM_CASCODE_P"
         num_bits: 1
       B:
         direction: inputOutput
@@ -288,7 +288,7 @@ instances:
     instpins:
       S:
         direction: inputOutput
-        net_name: "QM_B_CASC_P"
+        net_name: "QM_B_CASCODE_P"
         num_bits: 1
       D:
         direction: inputOutput
@@ -308,7 +308,7 @@ instances:
     instpins:
       S:
         direction: inputOutput
-        net_name: "QM_CASC_P"
+        net_name: "QM_CASCODE_P"
         num_bits: 1
       D:
         direction: inputOutput
