@@ -8,12 +8,12 @@ import pkg_resources
 from bag.design import Module
 
 
-yaml_file = pkg_resources.resource_filename(__name__, os.path.join('netlist_info', 'DynamicToStaticLatch_Latch.yaml'))
+yaml_file = pkg_resources.resource_filename(__name__, os.path.join('netlist_info', 'DynamicToStaticLatch.yaml'))
 
 
 # noinspection PyPep8Naming
-class bag_advanced_examples__DynamicToStaticLatch_Latch(Module):
-    """Module for library bag_advanced_examples cell DynamicToStaticLatch_Latch.
+class bag_advanced_examples__DynamicToStaticLatch(Module):
+    """Module for library bag_advanced_examples cell DynamicToStaticLatch.
 
     Fill in high level description here.
     """
@@ -50,6 +50,8 @@ class bag_advanced_examples__DynamicToStaticLatch_Latch(Module):
             ('XL1PK2', 'latch1_pk2'), ('XL2PK2', 'latch2_pk2'),
             ('XINV1N', 'inv1_n'), ('XINV2N', 'inv2_n'),
             ('XINV1P', 'inv1_p'), ('XINV2P', 'inv2_p'),
+            ('XOUTINV1_N', 'outinv1_n'), ('XOUTINV2_N', 'outinv2_n'),
+            ('XOUTINV1_P', 'outinv1_p'), ('XOUTINV2_P', 'outinv2_p'),
         ]
 
         for sch_name, layout_name in tran_info_list:

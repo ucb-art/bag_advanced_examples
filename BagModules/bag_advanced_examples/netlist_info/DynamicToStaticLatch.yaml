@@ -1,8 +1,8 @@
 lib_name: bag_advanced_examples
-cell_name: DynamicToStaticLatch_Latch
-pins: [ "QM", "S_IN", "QM_B", "VDD", "VSS", "R_IN" ]
+cell_name: DynamicToStaticLatch
+pins: [ "VDD", "R_IN", "VSS", "Q_B", "S_IN", "Q" ]
 instances:
-  XDUMMY:
+  XOUTINV1_N:
     lib_name: BAG_prim
     cell_name: nmos4_standard
     instpins:
@@ -12,7 +12,7 @@ instances:
         num_bits: 1
       D:
         direction: inputOutput
-        net_name: "VSS"
+        net_name: "Q"
         num_bits: 1
       B:
         direction: inputOutput
@@ -20,7 +20,27 @@ instances:
         num_bits: 1
       G:
         direction: inputOutput
+        net_name: "QM_B"
+        num_bits: 1
+  XOUTINV2_N:
+    lib_name: BAG_prim
+    cell_name: nmos4_standard
+    instpins:
+      S:
+        direction: inputOutput
         net_name: "VSS"
+        num_bits: 1
+      D:
+        direction: inputOutput
+        net_name: "Q_B"
+        num_bits: 1
+      B:
+        direction: inputOutput
+        net_name: "VSS"
+        num_bits: 1
+      G:
+        direction: inputOutput
+        net_name: "QM"
         num_bits: 1
   XINV1N:
     lib_name: BAG_prim
@@ -182,6 +202,86 @@ instances:
         direction: inputOutput
         net_name: "S_IN"
         num_bits: 1
+  XDUMMY:
+    lib_name: BAG_prim
+    cell_name: nmos4_standard
+    instpins:
+      S:
+        direction: inputOutput
+        net_name: "VSS"
+        num_bits: 1
+      D:
+        direction: inputOutput
+        net_name: "VSS"
+        num_bits: 1
+      B:
+        direction: inputOutput
+        net_name: "VSS"
+        num_bits: 1
+      G:
+        direction: inputOutput
+        net_name: "VSS"
+        num_bits: 1
+  XOUTINV1_P:
+    lib_name: BAG_prim
+    cell_name: pmos4_standard
+    instpins:
+      S:
+        direction: inputOutput
+        net_name: "VDD"
+        num_bits: 1
+      D:
+        direction: inputOutput
+        net_name: "Q"
+        num_bits: 1
+      B:
+        direction: inputOutput
+        net_name: "VDD"
+        num_bits: 1
+      G:
+        direction: inputOutput
+        net_name: "QM_B"
+        num_bits: 1
+  XOUTINV2_P:
+    lib_name: BAG_prim
+    cell_name: pmos4_standard
+    instpins:
+      S:
+        direction: inputOutput
+        net_name: "VDD"
+        num_bits: 1
+      D:
+        direction: inputOutput
+        net_name: "Q_B"
+        num_bits: 1
+      B:
+        direction: inputOutput
+        net_name: "VDD"
+        num_bits: 1
+      G:
+        direction: inputOutput
+        net_name: "QM"
+        num_bits: 1
+  XINV1P:
+    lib_name: BAG_prim
+    cell_name: pmos4_standard
+    instpins:
+      S:
+        direction: inputOutput
+        net_name: "VDD"
+        num_bits: 1
+      D:
+        direction: inputOutput
+        net_name: "R_IN_B"
+        num_bits: 1
+      B:
+        direction: inputOutput
+        net_name: "VDD"
+        num_bits: 1
+      G:
+        direction: inputOutput
+        net_name: "R_IN"
+        num_bits: 1
   XL2PK1:
     lib_name: BAG_prim
     cell_name: pmos4_standard
@@ -262,26 +362,6 @@ instances:
         direction: inputOutput
         net_name: "S_B"
         num_bits: 1
-  XINV1P:
-    lib_name: BAG_prim
-    cell_name: pmos4_standard
-    instpins:
-      S:
-        direction: inputOutput
-        net_name: "VDD"
-        num_bits: 1
-      D:
-        direction: inputOutput
-        net_name: "R_IN_B"
-        num_bits: 1
-      B:
-        direction: inputOutput
-        net_name: "VDD"
-        num_bits: 1
-      G:
-        direction: inputOutput
-        net_name: "R_IN"
-        num_bits: 1
   XL2PK2:
     lib_name: BAG_prim
     cell_name: pmos4_standard
@@ -342,6 +422,14 @@ instances:
         direction: inputOutput
         net_name: "S_IN"
         num_bits: 1
+  PIN2:
+    lib_name: basic
+    cell_name: iopin
+    instpins: {}
+  PIN3:
+    lib_name: basic
+    cell_name: iopin
+    instpins: {}
   PIN4:
     lib_name: basic
     cell_name: opin
@@ -357,12 +445,4 @@ instances:
   PIN1:
     lib_name: basic
     cell_name: ipin
-    instpins: {}
-  PIN2:
-    lib_name: basic
-    cell_name: iopin
-    instpins: {}
-  PIN3:
-    lib_name: basic
-    cell_name: iopin
     instpins: {}

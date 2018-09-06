@@ -47,15 +47,12 @@ from __future__ import (absolute_import, division,
 # noinspection PyUnresolvedReferences,PyCompatibility
 from builtins import *
 
-from typing import Any, Set, Dict, Optional, Union, List, Tuple
+from typing import Any, Set, Dict, Optional, Union, List
 
 from bag.layout.routing import TrackManager, TrackID, WireArray
 from bag.layout.template import TemplateDB
-from bag.layout.util import BBox
 
 from abs_templates_ec.analog_core import AnalogBase, AnalogBaseInfo
-from bag.layout.template import TemplateBase
-import math
 
 
 class DynamicToStaticLatch(AnalogBase):
@@ -662,7 +659,7 @@ class DynamicToStaticLatch(AnalogBase):
         make_tracks_extended = self.params['make_tracks_extended']
 
         # Define layers on which horizontal and vertical connections will be made, relative to mos_conn_layer
-        horz_conn_layer = self.mos_conn_layer + 1
+        # horz_conn_layer = self.mos_conn_layer + 1
         vert_conn_layer = self.mos_conn_layer + 2
 
         # Initialize the TrackManager, and define what horizontal wire types will be needed in each row
@@ -694,7 +691,7 @@ class DynamicToStaticLatch(AnalogBase):
         )
 
         # Create a temporary layout_info object that will be useful for spacing out wires
-        layout_info = AnalogBaseInfo(grid=self.grid, lch=lch, guard_ring_nf=0, top_layer=top_layer, fg_tot= 100,
+        layout_info = AnalogBaseInfo(grid=self.grid, lch=lch, guard_ring_nf=0, top_layer=top_layer, fg_tot=100,
                                      tech_cls_name=self._tech_cls_name)
 
         # Initialize the transistors
@@ -777,6 +774,12 @@ class DynamicToStaticLatch(AnalogBase):
             lch=lch, layout_info=layout_info, tr_man=tr_manager, layer_id=vert_conn_layer,
             cur_type='sig', next_type='sig', tx_1_fg=fg_inv, tx_2_fg=fg_inv
         )
+        fg_dum_min = self.get_num_fg_spaces(
+            layout_info=layout_info, tr_man=tr_manager, layer_id=vert_conn_layer,
+            cur_type='sig', next_type='sig'
+        )
+
+        fg_dum = max(fg_dum, fg_dum_min)
 
         col_outinv1 = fg_dum
         col_l1k1 = col_outinv1 + fg_outinv + fg_space_outinv_k1
@@ -814,29 +817,28 @@ class DynamicToStaticLatch(AnalogBase):
         self.assign_tx_column(tx=outinv2p, offset=col_outinv2, fg_col=fg_outinv, align=0)
         self.assign_tx_column(tx=outinv2n, offset=col_outinv2, fg_col=fg_outinv, align=0)
 
-        # TODO: Use matched?
         # Assign the transistor s/d directions
         self.set_tx_directions(outinv1n, seff='s', seff_dir=0)
         self.assign_tx_matched_direction(target_tx=outinv1p, source_tx=outinv1n, seff_dir=2, aligned=True)
         self.set_tx_directions(tx=latch1_nk1, seff='s', seff_dir=0)
-        self.set_tx_directions(tx=latch1_nk2, seff='s', seff_dir=0)
-        self.set_tx_directions(tx=latch1_n, seff='s', seff_dir=0)
-        self.set_tx_directions(tx=inv1n, seff='d', seff_dir=0)
         self.set_tx_directions(tx=latch1_pk1, seff='s', seff_dir=2)
-        self.set_tx_directions(tx=latch1_pk2, seff='s', seff_dir=2)
-        self.set_tx_directions(tx=latch1_p, seff='s', seff_dir=2)
-        self.set_tx_directions(tx=inv1p, seff='d', seff_dir=2)
+        self.set_tx_directions(tx=latch1_nk2, seff='s', seff_dir=0)
+        self.assign_tx_matched_direction(target_tx=latch1_pk2, source_tx=latch1_nk2, seff_dir=2, aligned=True)
+        self.set_tx_directions(tx=latch1_n, seff='s', seff_dir=0)
+        self.assign_tx_matched_direction(target_tx=latch1_p, source_tx=latch1_n, seff_dir=2, aligned=True)
+        self.set_tx_directions(tx=inv1n, seff='d', seff_dir=0)
+        self.assign_tx_matched_direction(target_tx=inv1p, source_tx=inv1n, seff_dir=2, aligned=True)
 
         self.set_tx_directions(outinv2n, seff='s', seff_dir=0)
         self.assign_tx_matched_direction(target_tx=outinv2p, source_tx=outinv2n, seff_dir=2, aligned=True)
         self.set_tx_directions(tx=latch2_nk1, seff='s', seff_dir=0)
-        self.set_tx_directions(tx=latch2_nk2, seff='s', seff_dir=0)
-        self.set_tx_directions(tx=latch2_n, seff='s', seff_dir=0)
-        self.set_tx_directions(tx=inv2n, seff='d', seff_dir=0)
         self.set_tx_directions(tx=latch2_pk1, seff='s', seff_dir=2)
-        self.set_tx_directions(tx=latch2_pk2, seff='s', seff_dir=2)
-        self.set_tx_directions(tx=latch2_p, seff='s', seff_dir=2)
-        self.set_tx_directions(tx=inv2p, seff='d', seff_dir=2)
+        self.set_tx_directions(tx=latch2_nk2, seff='s', seff_dir=0)
+        self.assign_tx_matched_direction(target_tx=latch2_pk2, source_tx=latch2_nk2, seff_dir=2, aligned=True)
+        self.set_tx_directions(tx=latch2_n, seff='s', seff_dir=0)
+        self.assign_tx_matched_direction(target_tx=latch2_p, source_tx=latch2_n, seff_dir=2, aligned=True)
+        self.set_tx_directions(tx=inv2n, seff='d', seff_dir=0)
+        self.assign_tx_matched_direction(target_tx=inv2p, source_tx=inv2n, seff_dir=2, aligned=True)
 
         # Draw the transistor row bases
         self.draw_base(lch, fg_total, self._ptap_w, self._ntap_w,
@@ -1030,14 +1032,14 @@ class DynamicToStaticLatch(AnalogBase):
             ),
             width=tr_manager.get_width(layer_id=vert_conn_layer, track_type='sig')
         )
-        self.connect_to_tracks(
+        warr_r_in_vert = self.connect_to_tracks(
             [warr_inv1p_g_h, warr_r_in],
             tid_inv1p_g_vert,
             min_len_mode=0,
             track_lower=min([tid.get_bounds(self.grid, unit_mode=True)[0] for tid in [tid_r_in, tid_s_in]]),
             unit_mode=True
         )
-        self.connect_to_tracks(
+        warr_s_in_vert = self.connect_to_tracks(
             [warr_inv2p_g_h, warr_s_in],
             tid_inv2p_g_vert,
             min_len_mode=0,
@@ -1274,15 +1276,68 @@ class DynamicToStaticLatch(AnalogBase):
             width=tr_manager.get_width(layer_id=vert_conn_layer, track_type='sig'),
         )
 
-        warr_outinv1_g_vet = self.connect_to_tracks(
+        warr_outinv1_g_vert = self.connect_to_tracks(
             [warr_outinv1n_g, warr_outinv1p_g],
-            tid_outinv1_g_vert,
+            tid_outinv1_g_vert
         )
-        warr_outinv2_g_vet = self.connect_to_tracks(
+        warr_outinv2_g_vert = self.connect_to_tracks(
             [warr_outinv2n_g, warr_outinv2p_g],
-            tid_outinv2_g_vert,
+            tid_outinv2_g_vert
         )
 
+        self.connect_to_track_wires(
+            warr_qm_b,
+            warr_outinv1_g_vert
+        )
+        self.connect_to_track_wires(
+            warr_qm,
+            warr_outinv2_g_vert
+        )
+
+        tid_q_vert = TrackID(
+            layer_id=vert_conn_layer,
+            track_idx=tr_manager.get_next_track(
+                layer_id=vert_conn_layer,
+                cur_idx=tid_outinv1_g_vert.base_index,
+                cur_type='sig',
+                next_type='sig',
+                up=False,
+            ),
+            width=tr_manager.get_width(layer_id=vert_conn_layer, track_type='sig'),
+        )
+        tid_q_b_vert = TrackID(
+            layer_id=vert_conn_layer,
+            track_idx=tr_manager.get_next_track(
+                layer_id=vert_conn_layer,
+                cur_idx=tid_outinv2_g_vert.base_index,
+                cur_type='sig',
+                next_type='sig',
+                up=True,
+            ),
+            width=tr_manager.get_width(layer_id=vert_conn_layer, track_type='sig'),
+        )
+
+        warr_q_h = self.connect_to_tracks(
+            [outinv1n['d'], outinv1p['d']],
+            tid_cascode_p,
+            min_len_mode=0
+        )
+        warr_q_b_h = self.connect_to_tracks(
+            [outinv2n['d'], outinv2p['d']],
+            tid_cascode_p,
+            min_len_mode=0
+        )
+
+        warr_q_v = self.connect_to_tracks(
+            [warr_q_h],
+            tid_q_vert,
+            min_len_mode=0
+        )
+        warr_q_b_v = self.connect_to_tracks(
+            [warr_q_b_h],
+            tid_q_b_vert,
+            min_len_mode=0
+        )
 
         # If input_reset_high is false, wire layout will be evenly loaded, but not fully symmetric
         # Thus, if make_tracks_extended is true, make the layout fully symmetric, at the cost of slightly more
@@ -1294,36 +1349,45 @@ class DynamicToStaticLatch(AnalogBase):
                 upper=max(tid.get_bounds(self.grid, unit_mode=True)[1] for tid in [tid_l1p_vert, tid_l2p_vert]),
                 unit_mode=True
             )
-            warr_r_in_b, warr_s_in_b = self.extend_wires(
+            self.extend_wires(
                 [warr_r_in_b, warr_s_in_b],
                 lower=min(tid.get_bounds(self.grid, unit_mode=True)[0] for tid in [tid_l1n_vert, tid_l2n_vert]),
                 upper=max(tid.get_bounds(self.grid, unit_mode=True)[1] for tid in [tid_l1n_vert, tid_l2n_vert]),
                 unit_mode=True
             )
+            self.extend_wires(
+                [warr_qm, warr_qm_b],
+                lower=min(tid.get_bounds(self.grid, unit_mode=True)[0] for tid in [tid_outinv1_g_vert,
+                                                                                   tid_outinv2_g_vert]),
+                upper=max(tid.get_bounds(self.grid, unit_mode=True)[1] for tid in [tid_outinv1_g_vert,
+                                                                                   tid_outinv2_g_vert]),
+                unit_mode=True
+            )
 
         self.connect_to_substrate(
             'ptap',
-            [latch1_n['s'], latch1_nk1['s'], inv1n['s'], latch2_n['s'], latch2_nk1['s'], inv2n['s']]
+            [latch1_n['s'], latch1_nk1['s'], inv1n['s'], outinv1n['s'],
+             latch2_n['s'], latch2_nk1['s'], inv2n['s'], outinv2n['s']]
         )
 
         self.connect_to_substrate(
             'ntap',
-            [latch1_p['s'], latch1_pk1['s'], inv1p['s'], latch2_p['s'], latch2_pk1['s'], inv2p['s']]
+            [latch1_p['s'], latch1_pk1['s'], inv1p['s'], outinv1p['s'],
+             latch2_p['s'], latch2_pk1['s'], inv2p['s'], outinv2p['s']]
         )
 
         warr_vss, warr_vdd = self.fill_dummy()
 
         if input_reset_high:
             # input_reset_high = True --> inputs are R_B and S_B (active low).
-
-            self.add_pin('R_B', warr_r_in, show=show_pins)
-            self.add_pin('S_B', warr_s_in, show=show_pins)
+            self.add_pin('R_B', [warr_r_in, warr_r_in_vert], show=show_pins)
+            self.add_pin('S_B', [warr_s_in, warr_s_in_vert], show=show_pins)
         else:
             # input_reset_high = False --> inputs are R and S (active high)
-            self.add_pin('R', warr_r_in, show=show_pins)
-            self.add_pin('S', warr_s_in, show=show_pins)
-        self.add_pin('QM', warr_qm, show=show_pins)
-        self.add_pin('QM_B', warr_qm_b, show=show_pins)
+            self.add_pin('R', [warr_r_in, warr_r_in_vert], show=show_pins)
+            self.add_pin('S', [warr_s_in, warr_s_in_vert], show=show_pins)
+        self.add_pin('Q', [warr_q_h, warr_q_v], show=show_pins)
+        self.add_pin('Q_B', [warr_q_b_h, warr_q_b_v], show=show_pins)
         self.add_pin('VSS', warr_vss, show=show_pins)
         self.add_pin('VDD', warr_vdd, show=show_pins)
 
@@ -1341,1163 +1405,3 @@ class DynamicToStaticLatch(AnalogBase):
             dum_info=self.get_sch_dummy_info(),
             tx_info=tx_info,
         )
-
-
-class DynamicToStaticInverter(AnalogBase):
-    """Output inverters for the D2S latch
-
-    Parameters
-    ----------
-    temp_db : TemplateDB
-            the template database.
-    lib_name : str
-        the layout library name.
-    params : Dict[str, Any]
-        the parameter values.
-    used_names : Set[str]
-        a set of already used cell names.
-    **kwargs
-        dictionary of optional parameters.  See documentation of
-        :class:`bag.layout.template.TemplateBase` for details.
-    """
-
-    def __init__(self, temp_db, lib_name, params, used_names, **kwargs):
-        # type: (TemplateDB, str, Dict[str, Any], Set[str], **Any) -> None
-        AnalogBase.__init__(self, temp_db, lib_name, params, used_names, **kwargs)
-        self._sch_params = None
-
-        ################################################################################
-        # Define global variables for holding transistor/row information
-        ################################################################################
-        self._global_rows = []
-        self._global_nrows = []
-        self._global_prows = []
-        self._w_dict = None
-        self._th_dict = None
-        self._seg_dict = None
-        self._ptap_w = None
-        self._ntap_w = None
-        self.wire_names = None
-
-    @property
-    def sch_params(self):
-        # type: () -> Dict[str, Any]
-        return self._sch_params
-
-    @classmethod
-    def get_default_param_values(cls):
-        # type: () -> Dict[str, Any]
-        """Returns a dictionary containing default parameter values.
-
-        Override this method to define default parameter values.  As good practice,
-        you should avoid defining default values for technology-dependent parameters
-        (such as channel length, transistor width, etc.), but only define default
-        values for technology-independent parameters (such as number of tracks).
-
-        Returns
-        -------
-        default_params : dict[str, any]
-            dictionary of default parameter values.
-        """
-        return dict(
-            flip_out_sd=False,
-            guard_ring_nf=0,
-            top_layer=None,
-            show_pins=True,
-        )
-
-    @classmethod
-    def get_params_info(cls):
-        """Returns a dictionary containing parameter descriptions.
-
-        Override this method to return a dictionary from parameter names to descriptions.
-
-        Returns
-        -------
-        param_info : dict[str, str]
-            dictionary from parameter name to description.
-        """
-        return dict(
-            top_layer='the top routing layer.',
-            tr_widths='Track width dictionary.',
-            tr_spaces='Track spacing dictionary.',
-            show_pins='True to create pin labels.',
-            lch='channel length, in meters.',
-            ptap_w='NMOS substrate width, in meters/number of fins.',
-            ntap_w='PMOS substrate width, in meters/number of fins.',
-            w_dict='NMOS/PMOS width dictionary.',
-            th_dict='NMOS/PMOS threshold flavor dictionary.',
-            seg_dict='NMOS/PMOS number of segments dictionary.',
-            fg_dum='Number of single-sided edge dummy fingers.',
-        )
-
-    def get_row_index(self,
-                      row,  # type: Dict
-                      ):
-        """
-        Returns the index of the row within the nch or pch rows
-
-        Parameters
-        ----------
-        row : Dict
-            the row whose index should be returned
-
-        Returns
-        -------
-        index : int
-            the index of the row
-
-        """
-        # type: (...) -> int
-        if row['type'] == 'nch':
-            return self._global_nrows.index(row)
-        else:
-            return self._global_prows.index(row)
-
-    def get_row_from_rowname(self,
-                             rowname,  # type: str
-                             ):
-        """
-        Returns the row dictionary cooresponding to the provided row name
-
-        Parameters
-        ----------
-        rowname : str
-            the name of the row whose information should be returned
-
-        Returns
-        -------
-        output : Dict
-            the row information, or None if the row cannot be found
-
-        """
-        # type: (...) -> Union[Dict, None]
-        output = None
-        for ind, row in enumerate(self._global_rows):
-            if row['name'] == rowname:
-                output = row
-        return output
-
-    def set_global_rows(self,
-                        row_list,  # type: List[Dict]
-                        ):
-        # type: (...) -> None
-        """
-        Given an ordered list of rows (from bottom of design to top), sets up the global variables used for accessing
-        row properties.
-
-        Parameters
-        ----------
-        row_list : List
-            The ordered list of row dictionaries. To abide by analogBase restrictions, all nch rows must come before
-            pch rows
-
-        Returns
-        -------
-
-        """
-        self._global_rows = row_list
-        n_ind = 0
-        p_ind = 0
-        for ind, row in enumerate(row_list):
-            row['global_index'] = ind
-            if row['type'] == 'nch':
-                row['index'] = n_ind
-                n_ind += 1
-                self._global_nrows.append(row)
-            elif row['type'] == 'pch':
-                row['index'] = p_ind
-                p_ind += 1
-                self._global_prows.append(row)
-            else:
-                raise ValueError('Row type must be "nch" or "pch" to indicate MOS type')
-
-    def initialize_rows(self,
-                        row_name,  # type: str
-                        orient,  # type: str
-                        nch_or_pch,  # type: str
-                        ):
-        # type : (...) -> Dict[str, Union[float, str, int]]
-        """
-        Initializes a data structure to hold useful information for each row
-
-        Parameters
-        ----------
-        row_name : str
-            the name to give the row. Should match the python variable name storing the row dictionary
-        orient : str
-            either 'R0' or 'MX' to specify whether the row is oriented gate down or gate up
-        nch_or_pch : str
-            either 'nch' to specify an nch row or 'pch' to specify a pch row
-
-        Returns
-        -------
-
-        """
-        if row_name not in self._w_dict.keys():
-            raise ValueError("row_name '{}' must appear in w_dict".format(row_name))
-        if row_name not in self._th_dict.keys():
-            raise ValueError("row_name '{}' must appear in th_dict".format(row_name))
-
-        if not ((orient == 'R0') or (orient == 'MX')):
-            raise ValueError("orient parameter must be 'R0' or 'MX' for transistor row {}".format(row_name))
-
-        row = {
-            'name': row_name,
-            'width': self._w_dict[row_name],
-            'th': self._th_dict[row_name],
-            'orient': orient,
-            'type': nch_or_pch
-        }
-
-        return row
-
-    def _row_prop(self,
-                  property_name,  # type: str
-                  nch_or_pch  # type: str
-                  ):
-        # type: (...) -> List
-        """
-        Returns a list of the given property type for all rows of the nch or pch type specified.
-        Useful helper function for draw_base
-
-        Parameters
-        ----------
-        property_name : str
-            The row property to be returned
-        nch_or_pch : str
-            either 'nch' or 'pch', to return the property for all nch rows or pch rows respectively
-
-        Returns
-        -------
-        prop_list : List
-            A list of the given property for all nch rows or pch rows
-
-        """
-        prop_list = []
-        for row in self._global_rows:
-            if row['type'] == nch_or_pch:
-                prop_list += [row[property_name]]
-        return prop_list
-
-    def initialize_tx(self,
-                      name,  # type: str
-                      row,  # type: Dict
-                      fg_spec,  # type: Union[str, int]
-                      seff_net=None,  # type: Optional[str]
-                      deff_net=None,  # type: Optional[str]
-                      ):
-        # type: (...) -> Dict[str, Union[str, int, float, Dict, WireArray]]
-        """
-        Initialize the transistor data structure.
-        s_net and d_net are the source and drain nets of the transistor in the schematic. i.e. it is the effective
-        source and drain connections, regardless of whether the source is drawn on the even or odd diffusion regions
-
-        Parameters
-        ----------
-        name : str
-            name of the transistor. Should match the python variable used to store the transistor dictionary
-        row : Dict
-            the row dictionary for the row this transistor will be placed on
-        fg_spec : Union[str, int]
-            Either)
-                - the name of the dictionary key in the YAML spec file for number of fingers in this transistor
-                - the (integer) number of fingers in this transistor
-        seff_net : Optional[str]
-            the name of the effective source net for dummy calculation.
-        deff_net : Optional[str]
-            the name of the effective drain net for dummy calculation.
-
-        Returns
-        -------
-
-        """
-        return {'name': name,
-                'fg': fg_spec if isinstance(fg_spec, int) else self._seg_dict[fg_spec],
-                'type': row['type'],
-                'w': row['width'],
-                'th': row['th'],
-                'row_ind': self.get_row_index(row),
-                'row': row,
-                'seff_net': '' if seff_net is None else seff_net,
-                'deff_net': '' if deff_net is None else deff_net,
-                }
-
-    @staticmethod
-    def align_in_column(fg_col,  # type: int
-                        fg_tx,  # type: int
-                        align=0,  # type: int
-                        ):
-        # type: (...) -> int
-        """
-        Returns the column index offset to justify a transistor within a column/stack
-
-        Parameters
-        ----------
-        fg_col : int
-            width (in fingers) of the column
-        fg_tx : int
-            width (in fingers) of the transistor
-        align : int
-            how to align the transistor in the column
-
-        Returns
-        -------
-        col : int
-            the column index of the start of the transistor
-        """
-        if align == 0:
-            col = (fg_col - fg_tx) // 2
-        elif align == -1:
-            col = 0
-        elif align == 1:
-            col = fg_col - fg_tx
-        else:
-            raise ValueError("align must be either -1, 0, or 1")
-
-        return col
-
-    def assign_tx_column(self,
-                         tx,  # type: Dict
-                         offset,  # type: int
-                         fg_col=None,  # type: Optional[int]
-                         align=0,  # type: int
-                         ):
-        # type: (...) -> None
-        """
-        Calculates and assigns the transistor's column index (the position of the leftmost finger of the transistor).
-        If fg_col is passed, the transistor is assumed to be in some stack of transistors that should all be
-        horizontally aligned within a given "column/stack". The offset in this case refers to the start of the column of
-        transistors rather than the offset of the passed transistor
-
-        Parameters
-        ----------
-        tx : Dict
-            the transistor whose position is being assigned
-        offset : int
-            the offset (in column index) of the transistor, or the column (stack) the transistor is in if fg_col is
-            not None
-        fg_col : int
-            the width in fingers of the column/stack in which the passed transistor should be aligned
-        align : int
-            How to align the transistor within the column/stack. 0 to center, 1 to right justify, -1 to left justify.
-
-        Returns
-        -------
-
-        """
-
-        if fg_col is None:
-            fg_col = tx['fg']
-        tx['col'] = offset + self.align_in_column(fg_col, tx['fg'], align)
-
-    @staticmethod
-    def set_tx_directions(tx,  # type: Dict
-                          seff,  # type: str
-                          seff_dir,  # type: int
-                          deff_dir=None,  # type: Optional[int]
-                          ):
-        # type: (...) -> None
-        """
-        Sets the source/drain direction of the transistor. Sets the effective source/drain location
-        BAG defaults source to be the left most diffusion, and then alternates source-drain-source-...
-        seff specifies whether the transistors effective source should be in the 's' or 'd' position.
-        seff_dir specifies whether the effective source's vertical connections will go up or down
-
-        If not specified, drain location and direction are assigned automatically to be oppositve to the source
-
-        Note: For mirrored rows, source and drain direction are flipped by BAG
-
-        Parameters
-        ----------
-        tx : Dict
-            the transistor to set
-        seff : str
-            's' or 'd' to indicate whether the transistor's effective source is the odd or even diffusion regions
-        seff_dir : int
-            0 to indicate connection goes down. 2 to indicate connection goes up. 1 to indicate middle connection
-        deff_dir : Optional[int]
-            0 to indicate connection goes down. 2 to indicate connection goes up. 1 to indicate middle connection
-
-
-        Returns
-        -------
-
-        """
-        if seff != 's' and seff != 'd':
-            raise ValueError("seff must be either 's' or 'd' \n"
-                             "Transistor    %s    violates this" % tx['name'])
-        if not (seff_dir == 0 or seff_dir == 2 or seff_dir == 1):
-            raise ValueError("seff_dir must be either 0, 1, or 2 \n"
-                             "Transistor    %s    violates this" % tx['name'])
-        if deff_dir is not None and not (deff_dir == 0 or deff_dir == 1 or deff_dir == 2):
-            raise ValueError("deff_dir must be either 0, 1, or 2 \n"
-                             "Transistor    %s    violates this" % tx['name'])
-        tx['seff'] = seff
-        tx['deff'] = 's' if seff == 'd' else 'd'
-        tx['seff_dir'] = seff_dir
-        if deff_dir is None:
-            tx['deff_dir'] = 2 - seff_dir
-        else:
-            tx['deff_dir'] = deff_dir
-
-        # Based on whether the source or drain is on the even diffusion regions, assign the sdir (corresponding
-        #  to the even diffusion regions) and ddir (corresponding to odd diffusion regions)
-        tx['sdir'] = tx['seff_dir'] if seff == 's' else tx['deff_dir']
-        tx['ddir'] = tx['deff_dir'] if seff == 's' else tx['seff_dir']
-        # Based on whether the source or drain is on the even diffusion regions, assign the s_net name (corresponding
-        #  to the even diffusion regions) and d_net name (corresponding to odd diffusion regions)
-        tx['s_net'] = tx['seff_net'] if seff == 's' else tx['deff_net']
-        tx['d_net'] = tx['deff_net'] if seff == 's' else tx['seff_net']
-
-    def assign_tx_matched_direction(self,
-                                    target_tx,  # type: Dict
-                                    source_tx,  # type: Dict
-                                    seff_dir,  # type: int
-                                    aligned=True,  # type: bool
-                                    deff_dir=None,  # type: Optional[int]
-                                    ):
-        # type: (...) -> None
-        """
-        Align the source/drain position (is source or drain leftmost diffusion) to a reference transistor
-        Also assign the source and drain connection directions (up/down)
-
-        Parameters
-        ----------
-        target_tx : Dict
-            the transistor to assign
-        source_tx : Dict
-            the reference transistor whose source/drain alignment should be matched
-        seff_dir : int
-            the connection direction of the effective source for the target transistor (0 for down, 2 for up,
-            1 for middle)
-        aligned : bool
-            True to have the target transistor's s/d connection be aligned with the source transistor.
-            False to have s_target align with d_source and d_target align with s_source
-        deff_dir : Optional[int]
-            if specified, sets the connection direction of the effective drain for the target transistor.
-            If not specified, drain direction is assumed to be opposite to the source direction
-
-        Returns
-        -------
-
-        """
-        if (target_tx['fg'] - source_tx['fg']) % 4 == 0 and aligned is True:
-            self.set_tx_directions(target_tx, source_tx['seff'], seff_dir, deff_dir)
-        else:
-            self.set_tx_directions(target_tx, source_tx['deff'], seff_dir, deff_dir)
-
-    def get_tracks(self):
-        # type: (...) -> Dict[str, Dict[str, List]]
-        """
-        Returns the number of tracks present in each row of the design. Useful in TemplateBase designs when two
-        horizontally adjacent analogBase blocks must have rows/tracks align.
-
-        Returns
-        -------
-
-        """
-        nds = []
-        ng = []
-        pds = []
-        pg = []
-        norient = []
-        porient = []
-        for row in self._global_rows:
-            if row['type'] == 'nch':
-                nds.append(self.get_num_tracks('nch', row['index'], 'ds'))
-                ng.append(self.get_num_tracks('nch', row['index'], 'g'))
-                norient.append(row['orient'])
-
-            elif row['type'] == 'pch':
-                pds.append(self.get_num_tracks('pch', row['index'], 'ds'))
-                pg.append(self.get_num_tracks('pch', row['index'], 'g'))
-                porient.append(row['orient'])
-            else:
-                raise ValueError('row does not have type nch or pch')
-
-        return dict(
-            nch=dict(
-                ds=nds,
-                g=ng,
-                orient=norient,
-            ),
-            pch=dict(
-                ds=pds,
-                g=pg,
-                orient=porient,
-            )
-        )
-
-    def get_wire_names(self):
-        return self.wire_names
-
-    @staticmethod
-    def get_num_fg_spaces(layout_info,  # type: AnalogBaseInfo
-                          tr_man,  # type: TrackManager
-                          layer_id,  # type: int
-                          cur_type,  # type: str
-                          next_type,  # type: str
-                          ):
-        # type: (...) -> int
-        """
-        Calculate the number of transistor column intervals needed to ensure the track-to-track space for the
-        given wire type on the given layer.
-
-        Parameters
-        ----------
-        layout_info : AnalogBaseInfo
-            AnalogBaseInfo layout information
-        tr_man : TrackManager
-            the TrackManager object containing width and space information
-        layer_id : int
-            the track layer id
-        cur_type : str
-            the current wire type
-        next_type : str
-            the next wire type
-
-        Returns
-        -------
-        num_cols : int
-            the number of columns needed to span the desired space
-        """
-        # Calculate the spacing on the given routing layer
-        num_tracks = tr_man.get_next_track(layer_id=layer_id, cur_idx=0, cur_type=cur_type, next_type=next_type)
-
-        # Convert to transistor columns
-        return layout_info.num_tracks_to_fingers(layer_id=layer_id,
-                                                 num_tracks=num_tracks,
-                                                 col_idx=0,
-                                                 even=True,
-                                                 fg_margin=0
-                                                 )
-
-    def wiring_space_to_tx_dummy_space(self,
-                                       lch,  # type: int
-                                       layout_info,  # type: AnalogBaseInfo
-                                       tr_man,  # type: TrackManager
-                                       layer_id,  # type: int
-                                       cur_type,  # type: str
-                                       next_type,  # type: str
-                                       tx_1_fg=0,  # type: int
-                                       tx_2_fg=0,  # type: int
-                                       ):
-        """
-        Calculates the number of dummy transistors required between two transistors using the passed routing
-        constraint. This will calculate a conservative spacing that may be greater than what is actually required.
-        Assumes that the wires are centered in the two transistors.
-
-        Parameters
-        ----------
-        lch : int
-            channel length, in resolution units
-        layout_info : AnalogBaseInfo
-            AnalogBaseInfo layout information
-        tr_man : TrackManager
-            the TrackManager object containing width and space information
-        layer_id : int
-            the track layer id
-        cur_type : str
-            the current wire type
-        next_type : str
-            the next wire type
-        tx_1_fg : int
-            number of fingers in the first transistor
-        tx_2_fg : int
-            number of fingers in the second transistor
-
-        Returns
-        -------
-        num_dummy : int
-            the number of dummy transistors needed
-        """
-        num_total_col = self.get_num_fg_spaces(layout_info, tr_man, layer_id, cur_type, next_type)
-        num_dummy = num_total_col - max(tx_1_fg // 2, 0) - max(tx_2_fg // 2, 0)
-        if num_dummy % 2 == 1:
-            num_dummy += 1
-
-        # Tech constrained minimum dummy number
-        dum_space_min = self._tech_cls.get_min_fg_sep(lch)
-
-        return max(num_dummy, dum_space_min)
-
-    def draw_layout(self):
-        # Get parameters from the parameter dictionary
-        top_layer = self.params['top_layer']
-        tr_widths = self.params['tr_widths']
-        tr_spaces = self.params['tr_spaces']
-        show_pins = self.params['show_pins']
-        lch = self.params['lch']
-
-        self._ptap_w = self.params['ptap_w']
-        self._ntap_w = self.params['ntap_w']
-        self._w_dict = self.params['w_dict']
-        self._th_dict = self.params['th_dict']
-        self._seg_dict = self.params['seg_dict']
-        fg_dum = self.params['fg_dum']
-
-        # Define layers on which horizontal and vertical connections will be made, relative to mos_conn_layer
-        horz_conn_layer = self.mos_conn_layer + 1
-        vert_conn_layer = self.mos_conn_layer + 2
-
-        # Initialize the TrackManager, and define what horizontal wire types will be needed in each row
-        tr_manager = TrackManager(grid=self.grid, tr_widths=tr_widths, tr_spaces=tr_spaces)
-        wire_names = dict(
-            nch=[
-                # nch row
-                dict(
-                    ds=['sig'],
-                    g=['sig']
-                ),
-            ],
-            pch=[
-                # pch row
-                dict(
-                    g=['sig'],
-                    ds=['sig']
-                ),
-            ]
-        )
-
-        # Set up row information
-        row_nch = self.initialize_rows(row_name='nch_row', orient='MX', nch_or_pch='nch')
-        row_pch = self.initialize_rows(row_name='pch_row', orient='R0', nch_or_pch='pch')
-
-        # Define the order of the rows (bottom to top) for this analogBase cell
-        self.set_global_rows(
-            [row_nch, row_pch]
-        )
-
-        # Create a temporary layout_info object that will be useful for spacing out wires
-        layout_info = AnalogBaseInfo(grid=self.grid, lch=lch, guard_ring_nf=0, top_layer=top_layer, fg_tot=100,
-                                     tech_cls_name=self._tech_cls_name)
-
-        # Initialize the transistors
-        inv1n = self.initialize_tx(name='inv1_n', row=row_nch, fg_spec='inv_n', deff_net='Q')
-        inv1p = self.initialize_tx(name='inv1_p', row=row_pch, fg_spec='inv_p', deff_net='Q')
-        inv2n = self.initialize_tx(name='inv2_n', row=row_nch, fg_spec='inv_n', deff_net='Q_B')
-        inv2p = self.initialize_tx(name='inv2_p', row=row_pch, fg_spec='inv_p', deff_net='Q_B')
-
-        transistors = [
-            inv1n, inv1p, inv2n, inv2p
-        ]
-
-        # Check that all transistors are even fingered, for symmetry of layout
-        for tx in transistors:
-            if tx['fg'] % 2 == 1:
-                raise ValueError(
-                    "Transistors must have even number of fingers. Transistor '{}' has {}".format(tx['name'], tx['fg]'])
-                )
-
-        # Floorplan goes:
-        # dum, inv, inv, dum
-        # Calculate width of each column/stack of transistors
-        fg_inv = max(inv1n['fg'], inv1p['fg'])
-
-        # Spacing
-        # From the floorplan, each column/stack of transistors will require 1 vertical 'sig' to 'sig' wire type
-        # spacing on the vert_conn_layer, at minimum
-        fg_space = self.wiring_space_to_tx_dummy_space(
-            lch=lch, layout_info=layout_info, tr_man=tr_manager, layer_id=vert_conn_layer,
-            cur_type='sig', next_type='sig', tx_1_fg=fg_inv, tx_2_fg=fg_inv
-        )
-
-        col_inv1 = fg_dum
-        col_inv2 = col_inv1 + fg_inv + fg_space
-
-        fg_total = col_inv2 + fg_inv + fg_dum
-
-        # Assign the transistor positions
-        self.assign_tx_column(tx=inv1n, offset=col_inv1, fg_col=fg_inv, align=0)
-        self.assign_tx_column(tx=inv1p, offset=col_inv1, fg_col=fg_inv, align=0)
-
-        self.assign_tx_column(tx=inv2n, offset=col_inv2, fg_col=fg_inv, align=0)
-        self.assign_tx_column(tx=inv2p, offset=col_inv2, fg_col=fg_inv, align=0)
-
-        # Assign the transistor s/d directions
-        self.set_tx_directions(tx=inv1n, seff='s', seff_dir=0)
-        self.assign_tx_matched_direction(target_tx=inv1p, source_tx=inv1n, seff_dir=2, aligned=True)
-
-        self.set_tx_directions(tx=inv2n, seff='s', seff_dir=0)
-        self.assign_tx_matched_direction(target_tx=inv2p, source_tx=inv2n, seff_dir=2, aligned=True)
-
-        # Draw the transistor row bases
-        self.draw_base(lch, fg_total, self._ptap_w, self._ntap_w,
-                       self._row_prop('width', 'nch'), self._row_prop('th', 'nch'),
-                       self._row_prop('width', 'pch'), self._row_prop('th', 'pch'),
-                       tr_manager=tr_manager, wire_names=wire_names,
-                       n_orientations=self._row_prop('orient', 'nch'),
-                       p_orientations=self._row_prop('orient', 'pch'),
-                       top_layer=top_layer,
-                       half_blk_x=False, half_blk_y=False,
-                       )
-
-        # Draw the transistors
-        for tx in transistors:
-            tx['ports'] = self.draw_mos_conn(mos_type=tx['type'],
-                                             row_idx=tx['row_ind'],
-                                             col_idx=tx['col'],
-                                             fg=tx['fg'],
-                                             sdir=tx['sdir'],
-                                             ddir=tx['ddir'],
-                                             s_net=tx['s_net'],
-                                             d_net=tx['d_net'],
-                                             )
-            tx['s'] = tx['ports'][tx['seff']]
-            tx['d'] = tx['ports'][tx['deff']]
-            tx['g'] = tx['ports']['g']
-
-        # Create TrackIDs from the wire_names and TrackManager
-        tid_nch_gate = self.get_wire_id('nch', row_nch['index'], 'g', wire_name='sig')
-        tid_pch_gate = self.get_wire_id('pch', row_nch['index'], 'g', wire_name='sig')
-
-        warr_qm_b = self.connect_to_tracks(
-            [inv1n['g'], inv1p['g']],
-            tid_nch_gate,
-            min_len_mode=0
-        )
-        warr_qm = self.connect_to_tracks(
-            [inv2n['g'], inv2p['g']],
-            tid_nch_gate,
-            min_len_mode=0
-        )
-
-        warr_q = self.connect_to_tracks(
-            [inv1n['d'], inv1p['d']],
-            tid_pch_gate,
-            min_len_mode=0
-        )
-        warr_q_b = self.connect_to_tracks(
-            [inv2n['d'], inv2p['d']],
-            tid_pch_gate,
-            min_len_mode=0
-        )
-
-        self.connect_to_substrate(
-            'ptap',
-            [inv1n['s'], inv2n['s']]
-        )
-
-        self.connect_to_substrate(
-            'ntap',
-            [inv1p['s'], inv2p['s']]
-        )
-
-        warr_vss, warr_vdd = self.fill_dummy()
-
-        self.add_pin('QM', warr_qm, show=show_pins)
-        self.add_pin('QM_B', warr_qm_b, show=show_pins)
-        self.add_pin('Q', warr_q, show=show_pins)
-        self.add_pin('Q_B', warr_q_b, show=show_pins)
-        self.add_pin('VSS', warr_vss, show=show_pins)
-        self.add_pin('VDD', warr_vdd, show=show_pins)
-
-        # Define transistor properties for schematic
-        tx_info = {}
-        for tx in transistors:
-            tx_info[tx['name']] = {}
-            tx_info[tx['name']]['w'] = tx['w']
-            tx_info[tx['name']]['th'] = tx['th']
-            tx_info[tx['name']]['fg'] = tx['fg']
-
-        self._sch_params = dict(
-            lch=lch,
-            dum_info=self.get_sch_dummy_info(),
-            tx_info=tx_info,
-        )
-
-
-class DynamicToStatic(TemplateBase):
-    """The assembled latch and output inverter for the D2S
-
-        Parameters
-        ----------
-        temp_db : TemplateDB
-                the template database.
-        lib_name : str
-            the layout library name.
-        params : Dict[str, Any]
-            the parameter values.
-        used_names : Set[str]
-            a set of already used cell names.
-        **kwargs
-            dictionary of optional parameters.  See documentation of
-            :class:`bag.layout.template.TemplateBase` for details.
-        """
-    def __init__(self, temp_db, lib_name, params, used_names, **kwargs):
-        # type: (TemplateDB, str, Dict[str, Any], Set[str], **Any) -> None
-        TemplateBase.__init__(self, temp_db, lib_name, params, used_names, **kwargs)
-        self._sch_params = None
-
-    @property
-    def sch_params(self):
-        return self._sch_params
-
-    @classmethod
-    def get_params_info(cls):
-        return dict(
-            top_layer='the top routing layer.',
-            # tr_widths='Track width dictionary.',
-            # tr_spaces='Track spacing dictionary.',
-            # guard_ring_nf='Width of the guard ring, in number of fingers.  0 to disable guard ring.',
-            latch_params='Latch sizing parameters',
-            inverter_params='Output inverter sizing parameters',
-            show_pins='True to create pin labels.',
-            input_reset_high='True if inputs reset high (active low set/reset signals), '
-                             'False if inputs reset low (active high set/reset signals)',
-        )
-
-    def place_block_on_track(self,
-                             block,  # type: Union[TemplateBase, AnalogBase]
-                             x_offset=0,  # type: Optional[Union[int, float]]
-                             y_offset=0,  # type: Optional[Union[int, float]]
-                             unit_mode=True,  # type: Optional[bool]
-                             mode=0,  # type: Optional[Union[int, Tuple[int, int]]]
-                             half_track=False,  # type: Optional[Union[bool, Tuple[bool, bool]]]
-                             ):
-        # type: (...) -> (Union[int, float], Union[int, float])
-        """
-        Find block location offsets on nearest track for x and y
-
-        Parameters
-        ----------
-        block
-        x_offset
-        y_offset
-        unit_mode
-        mode
-        half_track
-
-        Returns
-        -------
-
-        """
-
-        # Do all calculations in unit mode
-        res = self.grid.resolution
-        if not unit_mode:
-            x_offset = int(round(x_offset / res))
-            y_offset = int(round(y_offset / res))
-
-        block_top_layer = block.top_layer
-        top_layer_dir = self.grid.get_direction(block_top_layer)
-
-        # Looks swapped because if top is 'x', then must align VERTICALLY based on top pitch
-        if top_layer_dir == 'x':
-            x_rounding_layer = block_top_layer - 1
-            y_rounding_layer = block_top_layer
-        else:
-            x_rounding_layer = block_top_layer
-            y_rounding_layer = block_top_layer - 1
-
-        # If half_track is False, it means we must restrict actual block tracks to be on track,
-        # which means offsets must be restricted to only half tracks (-0.5, 0.5, 1.5, etc), not whole tracks
-        # as in-block tracks are already offset by half a track
-        # Easiest way is to add half a pitch, call functions with half_track=False, then subtract
-        if isinstance(half_track, tuple):
-            if len(half_track) != 2:
-                raise ValueError("half_track must either be a signle value or a length 2 tuple")
-            x_half_track = half_track[0]
-            y_half_track = half_track[1]
-        elif isinstance(half_track, bool):
-            x_half_track = half_track
-            y_half_track = half_track
-        else:
-            raise ValueError("half_track must either be a signle value or a length 2 tuple")
-
-        if not x_half_track:
-            x_offset += self.grid.get_track_pitch(x_rounding_layer, unit_mode=True)//2
-            x_track_offset = -0.5
-        else:
-            x_track_offset = 0
-        if not y_half_track:
-            y_offset += self.grid.get_track_pitch(y_rounding_layer, unit_mode=True)//2
-            y_track_offset = -0.5
-        else:
-            y_track_offset = 0
-
-        # Handle seperate x and y modes
-        if isinstance(mode, tuple):
-            if len(mode) != 2:
-                raise ValueError("mode must either be a signle value or a length 2 tuple")
-            x_mode = mode[0]
-            y_mode = mode[1]
-        elif isinstance(mode, int):
-            x_mode = mode
-            y_mode = mode
-        else:
-            raise ValueError("mode must either be a signle value or a length 2 tuple")
-
-        x_ontrack = self.grid.track_to_coord(
-            x_rounding_layer,
-            self.grid.coord_to_nearest_track(
-                x_rounding_layer,
-                x_offset,
-                half_track=x_half_track,
-                unit_mode=True,
-                mode=x_mode
-            ) + x_track_offset,
-            unit_mode=True
-        )
-        y_ontrack = self.grid.track_to_coord(
-            y_rounding_layer,
-            self.grid.coord_to_nearest_track(
-                y_rounding_layer,
-                y_offset,
-                half_track=y_half_track,
-                unit_mode=True,
-                mode=y_mode
-            ) + y_track_offset,
-            unit_mode=True
-        )
-
-        if not unit_mode:
-            x_ontrack, y_ontrack = x_ontrack * res, y_ontrack * res
-
-        return x_ontrack, y_ontrack
-
-    def get_mos_conn_layer(self):
-        # type: (...) -> int
-        """
-
-        Returns
-        -------
-
-        """
-        return self.grid.tech_info.tech_params['layout']['mos_tech_class'].get_mos_conn_layer()
-
-    def draw_layout(self):
-        # Get parameters from the specifications
-        top_layer = self.params['top_layer']
-        input_reset_high = self.params['input_reset_high']
-        show_pins = self.params['show_pins']
-
-        latch_params = self.params['latch_params']
-        latch_params['show_pins'] = show_pins
-        latch_params['input_reset_high'] = self.params['input_reset_high']
-
-        inverter_params = self.params['inverter_params']
-        inverter_params['show_pins'] = show_pins
-
-        # Define the instance masters
-        latch_master = self.new_template(params=latch_params, temp_cls=DynamicToStaticLatch)
-        inverter_master = self.new_template(params=inverter_params, temp_cls=DynamicToStaticInverter)
-
-        vert_conn_layer = self.get_mos_conn_layer() + 2
-
-        if latch_master.bound_box.width_unit > inverter_master.bound_box.width_unit:
-            x_offset_unit_latch = 0
-            x_offset_unit_inverter = (latch_master.bound_box.width_unit - inverter_master.bound_box.width_unit) // 2
-            x_total = latch_master.bound_box.width_unit
-        else:
-            x_offset_unit_latch = (inverter_master.bound_box.width_unit - latch_master.bound_box.width_unit) // 2
-            x_offset_unit_inverter = 0
-            x_total = inverter_master.bound_box.width_unit
-
-        x_latch, y_latch = self.place_block_on_track(
-            latch_master,
-            x_offset=x_offset_unit_latch,
-            y_offset=0,
-            unit_mode=True, mode=(0, 0), half_track=False
-        )
-        latch_inst = self.add_instance(
-            latch_master, 'X_Latch',
-            loc=(x_latch, y_latch),
-            orient='R0',
-            unit_mode=True
-        )
-        x_inverter, y_inverter = self.place_block_on_track(
-            latch_master,
-            x_offset=x_offset_unit_inverter,
-            y_offset=latch_inst.bound_box.top_unit + inverter_master.bound_box.height_unit,
-            unit_mode=True, mode=(0, 0), half_track=False
-        )
-        inverter_inst = self.add_instance(
-            inverter_master, 'X_Inverter',
-            loc=(x_inverter, y_inverter),
-            orient='MX',
-            unit_mode=True
-        )
-
-        # Set block width
-        [blk_w, blk_h] = self.grid.get_block_size(top_layer, unit_mode=True)
-        right = math.ceil(x_total / blk_w) * blk_w
-        top = math.ceil(inverter_inst.bound_box.top_unit / blk_h) * blk_h
-        bound_box = BBox(
-            left=0, bottom=0, right=right, top=top,
-            resolution=self.grid.resolution, unit_mode=True
-        )
-        self.set_size_from_bound_box(top_layer, bound_box)
-
-        ''' 
-    
-
-        # Connect latch output to inverter input
-        inv1_vin_warr = outputinv_inst.get_all_port_pins('QM_B')[0]
-        inv2_vin_warr = outputinv_inst.get_all_port_pins('QM')[0]
-        latch_qm_warr = latch_inst.get_all_port_pins('QM')[0]
-        latch_qmb_warr = latch_inst.get_all_port_pins('QM_B')[0]
-
-        # Define vertical connection tracks
-        latchout1_vert_track = TrackID(
-            top_vert_layer,
-            self.grid.coord_to_nearest_track(
-                top_vert_layer,
-                inv1_vin_warr.middle,
-                mode=-1
-            )
-        )
-        latchout2_vert_track = TrackID(
-            top_vert_layer,
-            self.grid.coord_to_nearest_track(
-                top_vert_layer,
-                inv2_vin_warr.middle,
-                mode=1
-            )
-        )
-        # Actually perform connection
-        self.connect_to_tracks(
-            [inv1_vin_warr, latch_qmb_warr], latchout1_vert_track,
-            track_lower=self.grid.track_to_coord(
-                latch_qmb_warr.layer_id,
-                min(latch_qm_warr.track_id.base_index, latch_qmb_warr.track_id.base_index),
-                unit_mode=True
-            ),
-            unit_mode=True
-        )
-        self.connect_to_tracks(
-            [inv2_vin_warr, latch_qm_warr], latchout2_vert_track,
-            track_lower=self.grid.track_to_coord(
-                latch_qm_warr.layer_id,
-                min(latch_qm_warr.track_id.base_index, latch_qmb_warr.track_id.base_index),
-                unit_mode=True
-            ),
-            unit_mode=True
-        )
-
-
-        # Define the VSS connections
-        latch_vss_warr = latch_inst.get_all_port_pins('VSS')[0]
-        outputinv_vss_warr = outputinv_inst.get_all_port_pins('VSS')[0]
-
-        vss_verttrack_1 = TrackID(
-            top_vert_layer,
-            self.grid.coord_to_nearest_track(
-                top_vert_layer,
-                outputinv_vss_warr.lower, mode=-1
-            )
-        )
-        vss_verttrack_2 = TrackID(
-            top_vert_layer,
-            self.grid.coord_to_nearest_track(
-                top_vert_layer,
-                outputinv_vss_warr.upper, mode=1
-            )
-        )
-
-        self.connect_to_tracks(
-            [latch_vss_warr, outputinv_vss_warr],
-            vss_verttrack_1
-        )
-        self.connect_to_tracks(
-            [latch_vss_warr, outputinv_vss_warr],
-            vss_verttrack_2
-        )
-
-        # Define VDD connections
-        latch_vdd_warr = latch_inst.get_all_port_pins('VDD')[0]
-        outputinv_vdd_warr = outputinv_inst.get_all_port_pins('VDD')[0]
-
-        # Stitch the VDD wires together
-        vdd_tracklist = self.get_available_tracks(
-            top_vert_layer,
-            #  +1 because range subtracts 1
-            range(
-                self.grid.coord_to_nearest_track(
-                    top_vert_layer,
-                    outputinv_vdd_warr.lower, mode=1
-                ),
-                self.grid.coord_to_nearest_track(
-                    top_vert_layer,
-                    outputinv_vdd_warr.upper, mode=-1
-                )+1
-            ),
-            lower=self.grid.track_to_coord(latch_vdd_warr.layer_id, latch_vdd_warr.track_id.base_index, unit_mode=True),
-            upper=self.grid.track_to_coord(outputinv_vdd_warr.layer_id, outputinv_vdd_warr.track_id.base_index, unit_mode=True),
-            unit_mode=True
-        )
-
-        for counter in range(len(vdd_tracklist)):
-            if counter % 2 == 0:
-                self.connect_to_tracks(
-                    [latch_vdd_warr, outputinv_vdd_warr],
-                    TrackID(top_vert_layer, vdd_tracklist[counter])
-                )
-            counter += 1
-
-
-        self.reexport(outputinv_inst.get_port("Q_B"), net_name="Q_B", show=show_pins)
-        self.reexport(outputinv_inst.get_port("Q"), net_name="Q", show=show_pins)
-
-        # Extend output pins to top of block
-        outputinv_q_warr = outputinv_inst.get_all_port_pins('Q')[0]
-        outputinv_qb_warr = outputinv_inst.get_all_port_pins('Q_B')[0]
-        q_tid = TrackID(
-            outputinv_q_warr.layer_id + 1,
-            self.grid.coord_to_nearest_track(
-                outputinv_q_warr.layer_id + 1,
-                outputinv_q_warr.middle,
-                mode=-1
-            )
-        )
-        qb_tid = TrackID(
-            outputinv_qb_warr.layer_id + 1,
-            self.grid.coord_to_nearest_track(
-                outputinv_qb_warr.layer_id + 1,
-                outputinv_qb_warr.middle,
-                mode=1
-            )
-        )
-        q_warr = self.connect_to_tracks(outputinv_q_warr, q_tid)
-        qb_warr = self.connect_to_tracks(outputinv_qb_warr, qb_tid)
-        q_warr, qb_warr = self.extend_wires(
-            [q_warr, qb_warr], upper=y0, unit_mode=True
-        )
-        self.add_pin("Q", q_warr, show=show_pins)
-        self.add_pin("Q_B", qb_warr, show=show_pins)
-
-
-
-
-        # Export the input ports, and rename according to whether inputs are active low or high
-        if input_reset_high:
-            self.reexport(latch_inst.get_port("S_B"), show=show_pins)
-            self.reexport(latch_inst.get_port("R_B"), show=show_pins)
-        else:
-            self.reexport(latch_inst.get_port("S"), show=show_pins)
-            self.reexport(latch_inst.get_port("R"), show=show_pins)
-
-        # Export the VDD and VSS pins
-        self.reexport(latch_inst.get_port("VDD"), show=show_pins)
-        self.reexport(outputinv_inst.get_port("VDD"), show=show_pins)
-        self.add_pin('VSS',
-                     [latch_inst.get_all_port_pins('VSS')[0], outputinv_inst.get_all_port_pins('VSS')[0]],
-                     show=show_pins, )
-
-        # Set the bound box. Start by getting block height
-        [blk_w, blk_h] = self.grid.get_block_size(top_vert_layer, unit_mode=True)
-
-        top = math.ceil(max(outputinv_inst.bound_box.top_unit, latch_inst.bound_box.top_unit) / blk_h) * blk_h
-        right = math.ceil(max(outputinv_inst.bound_box.right_unit, latch_inst.bound_box.right_unit)/ blk_w) * blk_w
-        bound_box = latch_inst.bound_box
-        bound_box = bound_box.extend(x=0, y=0, unit_mode=True)
-        bound_box = bound_box.extend(x=right, y=top, unit_mode=True)
-        self.set_size_from_bound_box(top_vert_layer, bound_box)
-
-        self._sch_params = dict(
-            latch_params=latch_master.sch_params,
-            outputinv_params=outputinv_master.sch_params,
-            input_reset_high=input_reset_high
-        )
-        '''

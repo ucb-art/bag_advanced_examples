@@ -1,0 +1,116 @@
+lib_name: bag_advanced_examples
+cell_name: DTSA_and_D2S
+pins: [ "VIP", "VIN", "CLK", "CLK_B", "DIP", "DIN", "Q", "Q_B", "VDD", "VSS" ]
+instances:
+  X_DTSA:
+    lib_name: bag_advanced_examples
+    cell_name: DoubleTailSenseAmplifier
+    instpins:
+      VSS:
+        direction: inputOutput
+        net_name: "VSS"
+        num_bits: 1
+      CLK_B:
+        direction: input
+        net_name: "CLK_B"
+        num_bits: 1
+      CLK:
+        direction: input
+        net_name: "CLK"
+        num_bits: 1
+      VDD:
+        direction: inputOutput
+        net_name: "VDD"
+        num_bits: 1
+      DIN:
+        direction: output
+        net_name: "DIN"
+        num_bits: 1
+      DIP:
+        direction: output
+        net_name: "DIP"
+        num_bits: 1
+      VON:
+        direction: output
+        net_name: "VON"
+        num_bits: 1
+      VOP:
+        direction: output
+        net_name: "VOP"
+        num_bits: 1
+      VIN:
+        direction: input
+        net_name: "VIN"
+        num_bits: 1
+      VIP:
+        direction: input
+        net_name: "VIP"
+        num_bits: 1
+  X_D2S_LATCH:
+    lib_name: bag_advanced_examples
+    cell_name: DynamicToStaticLatch
+    instpins:
+      VDD:
+        direction: inputOutput
+        net_name: "VDD"
+        num_bits: 1
+      VSS:
+        direction: inputOutput
+        net_name: "VSS"
+        num_bits: 1
+      Q:
+        direction: output
+        net_name: "Q"
+        num_bits: 1
+      Q_B:
+        direction: output
+        net_name: "Q_B"
+        num_bits: 1
+      R_IN:
+        direction: input
+        net_name: "VON"
+        num_bits: 1
+      S_IN:
+        direction: input
+        net_name: "VOP"
+        num_bits: 1
+  PIN3:
+    lib_name: basic
+    cell_name: ipin
+    instpins: {}
+  PIN2:
+    lib_name: basic
+    cell_name: ipin
+    instpins: {}
+  PIN1:
+    lib_name: basic
+    cell_name: ipin
+    instpins: {}
+  PIN0:
+    lib_name: basic
+    cell_name: ipin
+    instpins: {}
+  PIN7:
+    lib_name: basic
+    cell_name: opin
+    instpins: {}
+  PIN6:
+    lib_name: basic
+    cell_name: opin
+    instpins: {}
+  PIN5:
+    lib_name: basic
+    cell_name: opin
+    instpins: {}
+  PIN4:
+    lib_name: basic
+    cell_name: opin
+    instpins: {}
+  PIN9:
+    lib_name: basic
+    cell_name: iopin
+    instpins: {}
+  PIN8:
+    lib_name: basic
+    cell_name: iopin
+    instpins: {}

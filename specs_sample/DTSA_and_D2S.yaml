@@ -1,0 +1,116 @@
+routing_grid:
+  layers: [4, 5, 6, 7]
+  spaces: [0.084, 0.100, 0.084, 0.100]
+  widths: [0.060, 0.080, 0.060, 0.080]
+  bot_dir: 'x'
+
+
+# Name of library in which design will be generated
+impl_lib: 'DTSA_and_D2S'
+# Name that generated top cell will be given
+impl_cell: 'DTSA_and_D2S'
+
+
+# Layout package that contains top level layout to be generated
+layout_package: 'advanced_examples.DTSA_and_D2S'
+# Name of class of top level class to be generated
+layout_class: 'DTSA_and_D2S'
+
+# Name of library of schematic template
+sch_gen_lib: bag_advanced_examples
+# Name of cell of schematic template
+sch_gen_cell: DTSA_and_D2S
+
+
+params:
+  D2S_params:  # Parameters for the dynamic to static latch
+    top_layer: 5  # Top layer used in the D2S AnalogBase generator
+    show_pins: True
+    fg_dum: 4
+
+    input_reset_high: False
+    make_tracks_extended: True
+
+    lch: !!float 18e-9
+    ptap_w: 6
+    ntap_w: 6
+    w_dict:  # Width of each row. Each row needs the width specified
+      nch_row: 4
+      pch_row: 6
+
+    th_dict:  # Threshold information / thick ox / etc for each row
+      nch_row: 'lvt'
+      pch_row: 'lvt'
+
+    seg_dict:  # Number of fingers of each transistor
+      latch_n: 2
+      latch_p: 2
+      latch_nk1: 2
+      latch_nk2: 2
+      latch_pk1: 2
+      latch_pk2: 2
+      inv_n: 2
+      inv_p: 2
+      outinv_n: 4
+      outinv_p: 2
+
+  DTSA_params:  # Parameters for the double tail sense amplifier
+    top_layer: 5
+    show_pins: True
+    fg_dum: 4
+
+    lch: !!float 18e-9
+    ptap_w: 6
+    ntap_w: 6
+    w_dict:  # Width of each row. Each row needs the width specified
+      tail:  4
+      pre_in:  6
+      regen_n:  4
+      regen_p:  4
+      pre_load:  6
+
+    th_dict:  # Threshold information / thick ox / etc for each row
+      tail: 'lvt'
+      pre_in: 'lvt'
+      regen_n: 'lvt'
+      regen_p: 'lvt'
+      pre_load: 'lvt'
+
+    seg_dict:  # Number of fingers of each transistor
+      tail_n: 8
+      in_n: 12
+      pre_load_p: 16
+      regen_n: 8
+      regen_p: 12
+      tail_p: 12
+      reset_n: 8
+
+  # Top layer used in the DTSA_and_D2S TemplateBase generator
+  top_layer: 5
+  guard_ring_nf: 0
+  show_pins: True
+
+  # Track width and spacing rules, used for TrackManager
+  # In the layout generator, these will be shared with D2S and DTSA so that all blocks use the same routing grid
+  tr_widths:
+    sig: {4: 1, 5: 1}
+    # wire_class: {4: width_on_layer_4, 5: width_on_layer_5, ...}
+  tr_spaces:
+    !!python/tuple ['sig', '']: {4: 2, 5: 1}
+    #!!python/tuple ['wire_class_1', 'wire_class_2']: {4: space_on_layer_4, 5: space_on_layer_5, ...}
+    # wire_class_2 can be ''  to indicate this is the spacing to all wire classes
+
+sim_envs: ['tt']
+tb_view_name: 'calibre'
+
+testbenches:
+  tb_tran:
+    tb_lib: 'tb_sch_temp_lib_here'
+    tb_cell: 'tb_sch_temp_cell_here'
+    tb_params:
+      cload: !!float 5e-15
+      fClk: !!float 6.25e9
+      vcm: !!float 0.8
+      vdd: !!float 1.2
+      vsensitivity: !!float 50e-3
+      cycleWait: !!float 100

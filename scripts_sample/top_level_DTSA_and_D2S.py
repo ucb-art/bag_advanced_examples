@@ -157,7 +157,7 @@ def configure_and_run(prj, specs, dsn_name, run=False):
 
 
 if __name__ == '__main__':
-    with open('bag_advanced_examples/specs_sample/D2SLatch.yaml', 'r') as f:
+    with open('bag_advanced_examples/specs_sample/DTSA_and_D2S.yaml', 'r') as f:
         block_specs = yaml.load(f)
 
     local_dict = locals()

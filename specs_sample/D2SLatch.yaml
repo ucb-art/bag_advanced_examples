@@ -14,7 +14,7 @@ impl_cell: 'D2S'
 # Layout package that contains top level layout to be generated
 layout_package: 'advanced_examples.DynamicToStaticLatch'
 # Name of class of top level class to be generated
-layout_class: 'DynamicToStatic'
+layout_class: 'DynamicToStaticLatch'
 
 # Name of library of schematic template
 sch_gen_lib: bag_advanced_examples
@@ -23,65 +23,41 @@ sch_gen_cell: DynamicToStaticLatch
 
 
 params:
-  input_reset_high: True
+  input_reset_high: False
+  make_tracks_extended: True
+
+  lch: !!float 18e-9
+  ptap_w: 6
+  ntap_w: 6
+  w_dict:  # Width of each row. Each row needs the width specified
+    nch_row: 4
+    pch_row: 6
+
+  th_dict:  # Threshold information / thick ox / etc for each row
+    nch_row: 'lvt'
+    pch_row: 'lvt'
+
+  seg_dict:  # Number of fingers of each transistor
+    latch_n: 4
+    latch_p: 4
+    latch_nk1: 4
+    latch_nk2: 2
+    latch_pk1: 2
+    latch_pk2: 4
+    inv_n: 2
+    inv_p: 4
+    outinv_n: 4
+    outinv_p: 2
+
+  fg_dum: 4
+
   show_pins: True
+
   top_layer: 5
-
-  inverter_params:
-    lch: !!float 18e-9
-    ptap_w: 6
-    ntap_w: 6
-    w_dict:  # Width of each row. Each row needs the width specified
-      nch_row: 4
-      pch_row: 6
-
-    th_dict:  # Threshold information / thick ox / etc for each row
-      nch_row: 'lvt'
-      pch_row: 'lvt'
-
-    seg_dict:  # Number of fingers of each transistor
-      inv_n: 2
-      inv_p: 2
-
-    fg_dum: 4
-
-    top_layer: 5
-    tr_widths:
-      sig: {4: 1, 5: 1}
-    tr_spaces:
-      !!python/tuple ['sig', '']: {4: 2, 5: 1}
-
-  latch_params:
-    make_tracks_extended: True
-
-    lch: !!float 18e-9
-    ptap_w: 6
-    ntap_w: 6
-    w_dict:  # Width of each row. Each row needs the width specified
-      nch_row: 4
-      pch_row: 6
-
-    th_dict:  # Threshold information / thick ox / etc for each row
-      nch_row: 'lvt'
-      pch_row: 'lvt'
-
-    seg_dict:  # Number of fingers of each transistor
-      latch_n: 2
-      latch_p: 2
-      latch_nk1: 6
-      latch_nk2: 2
-      latch_pk1: 2
-      latch_pk2: 2
-      inv_n: 2
-      inv_p: 2
-
-    fg_dum: 4
-
-    top_layer: 5
-    tr_widths:
-      sig: {4: 1, 5: 1}
-    tr_spaces:
-      !!python/tuple ['sig', '']: {4: 2, 5: 2}
+  tr_widths:
+    sig: {4: 1, 5: 1}
+  tr_spaces:
+    !!python/tuple ['sig', '']: {4: 2, 5: 1}
 
 sim_envs: ['tt']
 tb_view_name: 'calibre'
