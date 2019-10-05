@@ -1,5 +1,5 @@
 lib_name: bag_advanced_examples
-cell_name: wrapper_DTSA_overdrive_tb
+cell_name: wrapper_DTSA_od_tn_tb
 pins: [ "incm", "VSS", "VDD", "out", "out_mid", "inclk", "in" ]
 instances:
   XDUT:
@@ -52,19 +52,19 @@ instances:
     instpins:
       c:
         direction: inputOutput
-        net_name: "VON"
+        net_name: "net01"
         num_bits: 1
       d:
         direction: inputOutput
-        net_name: "VOP"
+        net_name: "out"
         num_bits: 1
       n:
         direction: inputOutput
-        net_name: "net20"
+        net_name: "VON"
         num_bits: 1
       p:
         direction: inputOutput
-        net_name: "out"
+        net_name: "VOP"
         num_bits: 1
   XBALMID:
     lib_name: analogLib
@@ -72,19 +72,19 @@ instances:
     instpins:
       c:
         direction: inputOutput
-        net_name: "DIN"
+        net_name: "net21"
         num_bits: 1
       d:
         direction: inputOutput
-        net_name: "DIP"
+        net_name: "out_mid"
         num_bits: 1
       n:
         direction: inputOutput
-        net_name: "net21"
+        net_name: "DIN"
         num_bits: 1
       p:
         direction: inputOutput
-        net_name: "out_mid"
+        net_name: "DIP"
         num_bits: 1
   XBALIN:
     lib_name: analogLib
@@ -180,7 +180,7 @@ instances:
     instpins:
       noConn:
         direction: inputOutput
-        net_name: "net20"
+        net_name: "net01"
         num_bits: 1
   Xnc_mid:
     lib_name: basic

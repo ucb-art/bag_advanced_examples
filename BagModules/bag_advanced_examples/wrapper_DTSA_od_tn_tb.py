@@ -9,10 +9,10 @@ from bag.design.module import Module
 
 
 # noinspection PyPep8Naming
-class bag_advanced_examples__wrapper_DTSA_overdrive_tb(Module):
+class bag_advanced_examples__wrapper_DTSA_od_tn_tb(Module):
     yaml_file = pkg_resources.resource_filename(__name__,
                                                 os.path.join('netlist_info',
-                                                             'wrapper_DTSA_overdrive_tb.yaml'))
+                                                             'wrapper_DTSA_od_tn_tb.yaml'))
 
     def __init__(self, database, parent=None, prj=None, **kwargs):
         Module.__init__(self, database, self.yaml_file, parent=parent, prj=prj, **kwargs)
@@ -31,4 +31,3 @@ class bag_advanced_examples__wrapper_DTSA_overdrive_tb(Module):
 
         for dut_pin, net_name in dut_conns.items():
             self.reconnect_instance_terminal('XDUT', dut_pin, net_name)
-
