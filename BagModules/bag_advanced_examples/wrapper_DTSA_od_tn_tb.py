@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+"""Wrapper schematic generator for overdrive recovery and transient noise testbenches, testbenches are located in bag2_testbenches_bwrc"""
 from typing import Dict
 
 import os
