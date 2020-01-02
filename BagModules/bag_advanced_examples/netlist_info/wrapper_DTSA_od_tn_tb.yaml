@@ -1,0 +1,192 @@
+lib_name: bag_advanced_examples
+cell_name: wrapper_DTSA_od_tn_tb
+pins: [ "incm", "VSS", "VDD", "out", "out_mid", "inclk", "in" ]
+instances:
+  XDUT:
+    lib_name: bag_advanced_examples
+    cell_name: DoubleTailSenseAmplifier
+    instpins:
+      VSS:
+        direction: inputOutput
+        net_name: "VSS"
+        num_bits: 1
+      CLK_B:
+        direction: input
+        net_name: "CLK_B"
+        num_bits: 1
+      CLK:
+        direction: input
+        net_name: "CLK"
+        num_bits: 1
+      VDD:
+        direction: inputOutput
+        net_name: "VDD"
+        num_bits: 1
+      DIN:
+        direction: output
+        net_name: "DIN"
+        num_bits: 1
+      DIP:
+        direction: output
+        net_name: "DIP"
+        num_bits: 1
+      VON:
+        direction: output
+        net_name: "VON"
+        num_bits: 1
+      VOP:
+        direction: output
+        net_name: "VOP"
+        num_bits: 1
+      VIN:
+        direction: input
+        net_name: "VIN"
+        num_bits: 1
+      VIP:
+        direction: input
+        net_name: "VIP"
+        num_bits: 1
+  XBALOUT:
+    lib_name: analogLib
+    cell_name: ideal_balun
+    instpins:
+      c:
+        direction: inputOutput
+        net_name: "net01"
+        num_bits: 1
+      d:
+        direction: inputOutput
+        net_name: "out"
+        num_bits: 1
+      n:
+        direction: inputOutput
+        net_name: "VON"
+        num_bits: 1
+      p:
+        direction: inputOutput
+        net_name: "VOP"
+        num_bits: 1
+  XBALMID:
+    lib_name: analogLib
+    cell_name: ideal_balun
+    instpins:
+      c:
+        direction: inputOutput
+        net_name: "net21"
+        num_bits: 1
+      d:
+        direction: inputOutput
+        net_name: "out_mid"
+        num_bits: 1
+      n:
+        direction: inputOutput
+        net_name: "DIN"
+        num_bits: 1
+      p:
+        direction: inputOutput
+        net_name: "DIP"
+        num_bits: 1
+  XBALIN:
+    lib_name: analogLib
+    cell_name: ideal_balun
+    instpins:
+      c:
+        direction: inputOutput
+        net_name: "incm"
+        num_bits: 1
+      d:
+        direction: inputOutput
+        net_name: "in"
+        num_bits: 1
+      n:
+        direction: inputOutput
+        net_name: "VIN"
+        num_bits: 1
+      p:
+        direction: inputOutput
+        net_name: "VIP"
+        num_bits: 1
+  VCLKB:
+    lib_name: analogLib
+    cell_name: vcvs
+    instpins:
+      NC+:
+        direction: inputOutput
+        net_name: "inclk"
+        num_bits: 1
+      NC-:
+        direction: inputOutput
+        net_name: "VSS"
+        num_bits: 1
+      PLUS:
+        direction: inputOutput
+        net_name: "CLK_B"
+        num_bits: 1
+      MINUS:
+        direction: inputOutput
+        net_name: "VDD"
+        num_bits: 1
+  VCLK:
+    lib_name: analogLib
+    cell_name: vcvs
+    instpins:
+      NC+:
+        direction: inputOutput
+        net_name: "inclk"
+        num_bits: 1
+      NC-:
+        direction: inputOutput
+        net_name: "VSS"
+        num_bits: 1
+      PLUS:
+        direction: inputOutput
+        net_name: "CLK"
+        num_bits: 1
+      MINUS:
+        direction: inputOutput
+        net_name: "VSS"
+        num_bits: 1
+  PIN3:
+    lib_name: basic
+    cell_name: ipin
+    instpins: {}
+  PIN0:
+    lib_name: basic
+    cell_name: ipin
+    instpins: {}
+  PIN4:
+    lib_name: basic
+    cell_name: ipin
+    instpins: {}
+  PIN6:
+    lib_name: basic
+    cell_name: iopin
+    instpins: {}
+  PIN1:
+    lib_name: basic
+    cell_name: iopin
+    instpins: {}
+  PIN5:
+    lib_name: basic
+    cell_name: opin
+    instpins: {}
+  PIN2:
+    lib_name: basic
+    cell_name: opin
+    instpins: {}
+  Xnc_out:
+    lib_name: basic
+    cell_name: noConn
+    instpins:
+      noConn:
+        direction: inputOutput
+        net_name: "net01"
+        num_bits: 1
+  Xnc_mid:
+    lib_name: basic
+    cell_name: noConn
+    instpins:
+      noConn:
+        direction: inputOutput
+        net_name: "net21"
+        num_bits: 1
