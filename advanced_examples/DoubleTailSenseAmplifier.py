@@ -141,6 +141,7 @@ class DoubleTailSenseAmplifier(AnalogBase):
             th_dict='NMOS/PMOS threshold flavor dictionary.',
             seg_dict='NMOS/PMOS number of segments dictionary.',
             fg_dum='Number of single-sided edge dummy fingers.',
+            offset_correction='Option to activate offset correction block',
         )
 
     def get_row_index(self,
@@ -494,7 +495,8 @@ class DoubleTailSenseAmplifier(AnalogBase):
         -------
 
         """
-        if (target_tx['fg'] - source_tx['fg']) % 4 == 0 and aligned is True:
+        # TODO: verify this part
+        if ((target_tx['fg'] - source_tx['fg']) % 4 == 0) == (aligned is True):
             self.set_tx_directions(target_tx, source_tx['seff'], seff_dir, deff_dir)
         else:
             self.set_tx_directions(target_tx, source_tx['deff'], seff_dir, deff_dir)
@@ -557,7 +559,9 @@ class DoubleTailSenseAmplifier(AnalogBase):
         self._w_dict = self.params['w_dict']
         self._th_dict = self.params['th_dict']
         self._seg_dict = self.params['seg_dict']
+        offset_correction = self.params['offset_correction']
         fg_dum = self.params['fg_dum']
+
 
         # Define what layers will be used for horizontal and vertical connections
         horz_conn_layer = self.mos_conn_layer + 1
@@ -596,6 +600,10 @@ class DoubleTailSenseAmplifier(AnalogBase):
                 dict(
                     g=['clk', ],
                     ds=['bias', ]
+                ) if not offset_correction else
+                dict(
+                    g=['bias', 'clk'],
+                    ds=['bias', 'bias']
                 ),
                 # Pre-amp input row
                 dict(
@@ -677,11 +685,41 @@ class DoubleTailSenseAmplifier(AnalogBase):
         reset_p = self.initialize_tx(name='reset_p', row=row_regen_n, fg_spec='reset_n', deff_net='VOP')
         reset_n = self.initialize_tx(name='reset_n', row=row_regen_n, fg_spec='reset_n', deff_net='VON')
 
+        if offset_correction:
+            tail_oc_1 = self.initialize_tx(name='tail_oc_1', row=row_tail, fg_spec='tail_oc',
+                                           seff_net='VSS', deff_net='OFFSET_CORRECTION_SOURCE')
+            tail_oc_2 = self.initialize_tx(name='tail_oc_2', row=row_tail, fg_spec='tail_oc',
+                                           seff_net='VSS', deff_net='OFFSET_CORRECTION_SOURCE')
+            tail_bias_n = self.initialize_tx(name='tail_bias_n', row=row_tail, fg_spec='tail_oc',
+                                             seff_net='VSS', deff_net='BIAS_N_SOURCE')
+            tail_bias_p = self.initialize_tx(name='tail_bias_p', row=row_tail, fg_spec='tail_oc',
+                                             seff_net='VSS', deff_net='BIAS_P_SOURCE')
+            enb_n = self.initialize_tx(name='enb_n', row=row_tail, fg_spec='enb',
+                                       seff_net='VSS', deff_net='IBIAS_N')
+            enb_p = self.initialize_tx(name='enb_p', row=row_tail, fg_spec='enb',
+                                       seff_net='VSS', deff_net='IBIAS_P')
+            oc_n = self.initialize_tx(name='oc_n', row=row_pre_in, fg_spec='in_oc',
+                                      seff_net='OFFSET_CORRECTION_SOURCE', deff_net='DIP')
+            oc_p = self.initialize_tx(name='oc_p', row=row_pre_in, fg_spec='in_oc',
+                                      seff_net='OFFSET_CORRECTION_SOURCE', deff_net='DIN')
+            bias_n = self.initialize_tx(name='bias_n', row=row_pre_in, fg_spec='in_oc',
+                                        seff_net='BIAS_N_SOURCE', deff_net='IBIAS_N')
+            bias_p = self.initialize_tx(name='bias_p', row=row_pre_in, fg_spec='in_oc',
+                                        seff_net='BIAS_P_SOURCE', deff_net='IBIAS_P')
+
+
         # Compose a list of all the transistors so it can be iterated over later
         transistors = [
             tail_1, tail_2, in_p, in_n, pre_load_p, pre_load_n, regen_n_p, regen_n_n,
             regen_p_p, regen_p_n, tail_p_1, tail_p_2, reset_p, reset_n
         ]
+
+        if offset_correction:
+            transistors = transistors + [
+                tail_oc_1, tail_oc_2, tail_bias_n, tail_bias_p, enb_n, enb_p,
+                oc_n, oc_p, bias_n, bias_p
+            ]
+
 
         # Check that all transistors are even fingered
         for tx in transistors:
@@ -699,9 +737,6 @@ class DoubleTailSenseAmplifier(AnalogBase):
         #     col_xxx refers to the location of the left most finger of a transistor or a column of transistors
         ################################################################################
 
-        fg_stack = max(tail_1['fg'], in_p['fg'], regen_n_p['fg'], regen_p_p['fg'], tail_p_1['fg'])
-        fg_side = max(reset_p['fg'], pre_load_p['fg'])
-
         # Add an explicit gap in the middle for symmetry. Set to 0 to not have gap
         fg_mid = 0
 
@@ -709,13 +744,44 @@ class DoubleTailSenseAmplifier(AnalogBase):
         # This varies between processes, so avoid hard-coding by using the method in self._tech_cls
         fg_space = self._tech_cls.get_min_fg_sep(lch)
 
-        fg_total = fg_dum + fg_side + fg_space + fg_stack + fg_mid + fg_space + fg_stack + fg_space + fg_side + fg_dum
+
+        if offset_correction:
+            fg_oc_half = max(tail_oc_1['fg'], oc_n['fg'])
+            fg_oc_full = 2 * fg_oc_half + fg_space
+            fg_side_part = max(reset_n['fg'], enb_n['fg'])
+        else:
+            fg_side_oc = 0
+            fg_side_part = reset_n['fg']
+
+        fg_stack = max(tail_1['fg'], in_p['fg'], regen_n_p['fg'], regen_p_p['fg'], tail_p_1['fg'])
+
+        # fg_side_p = max(reset_p['fg'], pre_load_p['fg'])
+
+        fg_side_full = max(pre_load_p['fg'], reset_p['fg']) if not offset_correction else \
+                       max(pre_load_p['fg'], reset_p['fg'] + fg_oc_full + fg_space)
+        fg_side_full = max(pre_load_p['fg'], fg_side_part) if not offset_correction else \
+                       max(pre_load_p['fg'], fg_side_part + fg_oc_full + fg_space)
+
+
+
+        fg_total = fg_stack * 2 + fg_side_full * 2 + fg_mid + fg_space * 3 + fg_dum * 2
 
         # Calculate the starting column index for each stack of transistors
         col_side_left = fg_dum
-        col_stack_left = col_side_left + fg_side + fg_space
+        col_stack_left = col_side_left + fg_side_full + fg_space
         col_stack_right = col_stack_left + fg_stack + fg_space + fg_mid
         col_side_right = col_stack_right + fg_stack + fg_space
+
+
+        if offset_correction:
+            col_bias_left = col_side_left + fg_side_full - (fg_side_part + fg_oc_full + fg_space)
+            col_oc_left = col_bias_left + fg_oc_half + fg_space
+            col_enb_left = col_oc_left + fg_oc_half + fg_space
+            col_enb_right = col_side_right
+            col_oc_right = col_enb_right + fg_side_part + fg_space
+            col_bias_right = col_oc_right + fg_oc_half + fg_space
+
+
 
         # Calculate positions of transistors
         # This uses helper functions to place each transistor within a stack/column of a specified starting index and
@@ -732,11 +798,27 @@ class DoubleTailSenseAmplifier(AnalogBase):
         self.assign_tx_column(tx=regen_p_p, offset=col_stack_right, fg_col=fg_stack, align=0)
         self.assign_tx_column(tx=tail_p_2, offset=col_stack_right, fg_col=fg_stack, align=0)
 
-        self.assign_tx_column(tx=reset_n, offset=col_side_left, fg_col=fg_side, align=1)
-        self.assign_tx_column(tx=pre_load_n, offset=col_side_left, fg_col=fg_side, align=1)
 
-        self.assign_tx_column(tx=reset_p, offset=col_side_right, fg_col=fg_side, align=-1)
-        self.assign_tx_column(tx=pre_load_p, offset=col_side_right, fg_col=fg_side, align=-1)
+
+        self.assign_tx_column(tx=reset_n, offset=col_enb_left, fg_col=fg_side_part, align=0)
+        self.assign_tx_column(tx=pre_load_n, offset=col_side_left, fg_col=fg_side_full, align=1)
+
+        self.assign_tx_column(tx=reset_p, offset=col_enb_right, fg_col=fg_side_part, align=0)
+        self.assign_tx_column(tx=pre_load_p, offset=col_side_right, fg_col=fg_side_full, align=-1)
+
+        if offset_correction:
+            self.assign_tx_column(tx=tail_bias_n, offset=col_bias_left, fg_col=fg_oc_half, align=0)
+            self.assign_tx_column(tx=bias_n, offset=col_bias_left, fg_col=fg_oc_half, align=0)
+            self.assign_tx_column(tx=tail_oc_1, offset=col_oc_left, fg_col=fg_oc_half, align=0)
+            self.assign_tx_column(tx=oc_n, offset=col_oc_left, fg_col=fg_oc_half, align=0)
+
+            self.assign_tx_column(tx=tail_oc_2, offset=col_oc_right, fg_col=fg_oc_half, align=0)
+            self.assign_tx_column(tx=oc_p, offset=col_oc_right, fg_col=fg_oc_half, align=0)
+            self.assign_tx_column(tx=tail_bias_p, offset=col_bias_right, fg_col=fg_oc_half, align=0)
+            self.assign_tx_column(tx=bias_p, offset=col_bias_right, fg_col=fg_oc_half, align=0)
+
+            self.assign_tx_column(tx=enb_n, offset=col_enb_left, fg_col=fg_side_part, align=0)
+            self.assign_tx_column(tx=enb_p, offset=col_enb_right, fg_col=fg_side_part, align=0)
 
         ################################################################################
         # 4:  Assign the transistor directions (s/d up vs down)
@@ -775,6 +857,28 @@ class DoubleTailSenseAmplifier(AnalogBase):
         self.assign_tx_matched_direction(target_tx=tail_p_2, source_tx=regen_p_n, seff_dir=2, aligned=False)
         self.set_tx_directions(tx=reset_n, seff='s', seff_dir=0)
         self.set_tx_directions(tx=pre_load_n, seff='s', seff_dir=2)
+
+        if offset_correction:
+            # TODO: correct assign_tx_matched_dorection and use it here
+            self.set_tx_directions(tx=tail_oc_1, seff='s', seff_dir=0)
+            self.set_tx_directions(tx=tail_oc_2, seff='s', seff_dir=0)
+            self.set_tx_directions(tx=tail_bias_n, seff='s', seff_dir=0)
+            self.set_tx_directions(tx=tail_bias_p, seff='s', seff_dir=0)
+
+            self.assign_tx_matched_direction(target_tx=oc_n, source_tx=tail_oc_1, seff_dir=0, aligned=False)
+            self.assign_tx_matched_direction(target_tx=oc_p, source_tx=tail_oc_2, seff_dir=0, aligned=False)
+            self.assign_tx_matched_direction(target_tx=bias_n, source_tx=tail_bias_n, seff_dir=0, aligned=False)
+            self.assign_tx_matched_direction(target_tx=bias_p, source_tx=tail_bias_p, seff_dir=0, aligned=False)
+            # seff = 'd' if ((tail_oc_1['fg'] - oc_n['fg']) %4 == 0) else 's'
+            # self.set_tx_directions(tx=oc_n, seff=seff, seff_dir=0)
+            # self.set_tx_directions(tx=oc_p, seff=seff, seff_dir=0)
+            # self.set_tx_directions(tx=bias_n, seff=seff, seff_dir=0)
+            # self.set_tx_directions(tx=bias_p, seff=seff, seff_dir=0)
+
+            # self.set_tx_directions(tx=enb_n, seff='s', seff_dir=0)
+            # self.set_tx_directions(tx=enb_p, seff='s', seff_dir=0)
+            self.assign_tx_matched_direction(target_tx=enb_n, source_tx=reset_n, seff_dir=0, aligned=True)
+            self.assign_tx_matched_direction(target_tx=enb_p, source_tx=reset_p, seff_dir=0, aligned=True)
 
         ################################################################################
         # 5:  Draw the transistor rows, and the transistors
@@ -830,6 +934,11 @@ class DoubleTailSenseAmplifier(AnalogBase):
         tid_sig_in_horz = self.get_wire_id('nch', row_pre_in['index'], 'g', wire_name='sig')
         tid_preamp_load_d = self.get_wire_id('pch', row_pre_load['index'], 'ds', wire_name='sig')
 
+        if offset_correction:
+            tid_ibias = self.get_wire_id('nch', row_pre_in['index'], 'g', wire_name='sig')
+            tid_enb_horz = tid_vdd_horz = self.get_wire_id('nch', row_tail['index'], 'g', wire_name='bias')
+            tid_d_tail_oc = tid_d_tail_bias = self.get_wire_id('nch', row_tail['index'], 'ds', wire_name='bias', wire_idx=1)
+
         ################################################################################
         # 7:  Perform wiring
         #
@@ -871,7 +980,8 @@ class DoubleTailSenseAmplifier(AnalogBase):
         # Connect input transistor drain to a horizontal track
         # Note from schematic that D_N connects to IN_P
         warr_d_n = self.connect_to_tracks(
-            [in_p['d']],
+            [in_p['d']] +
+            ([oc_p['d']] if offset_correction else []),
             tid_d,
             min_len_mode=1
         )
@@ -913,7 +1023,8 @@ class DoubleTailSenseAmplifier(AnalogBase):
         )
 
         warr_d_p = self.connect_to_tracks(
-            [in_n['d']],
+            [in_n['d']] +
+            ([oc_n['d']] if offset_correction else []),
             tid_d,
             min_len_mode=1
         )
@@ -971,7 +1082,8 @@ class DoubleTailSenseAmplifier(AnalogBase):
         )
 
         warr_tail_preamp_clk = self.connect_to_tracks(
-            [tail_1['g'], tail_2['g']],
+            [tail_1['g'], tail_2['g']] +
+            ([tail_oc_1['g'], tail_oc_2['g']] if offset_correction else []),
             tid_tail_preamp_clk,
             min_len_mode=0
         )
@@ -1058,6 +1170,104 @@ class DoubleTailSenseAmplifier(AnalogBase):
             unit_mode=True
         )
 
+        # tid_ibias_horz = self.get_wire_id('nch', row_pre_in['index'], 'g', wire_name='sig')
+        # tid_enb_horz = tid_vdd_horz = self.get_wire_id('nch', row_tail['index'], 'g', wire_name='bias')
+        # tid_d_oc_tail = self.get_wire_id('nch', row_tail['index'], 'ds', wire_name='bias', wire_idx=1)
+        if offset_correction:
+            warr_ibias_n = self.connect_to_tracks(
+                [bias_n['d'], bias_n['g'], oc_n['g'], enb_n['d']],
+                tid_ibias,
+                track_lower=self.bound_box.left_unit,
+                unit_mode=True,
+                min_len_mode=0,
+            )
+
+            warr_ibias_p = self.connect_to_tracks(
+                [bias_p['d'], bias_p['g'], oc_p['g'], enb_p['d']],
+                tid_ibias,
+                track_upper=self.bound_box.right_unit,
+                unit_mode=True,
+                min_len_mode=0,
+            )
+
+            warr_d_tail_oc = self.connect_to_tracks(
+                [tail_oc_1['d'], tail_oc_2['d'], oc_n['s'], oc_p['s']],
+                tid_d_tail_oc,
+                min_len_mode=0,
+            )
+
+            warr_d_tail_bias_n = self.connect_to_tracks(
+                [tail_bias_n['d'], bias_n['s']],
+                tid_d_tail_bias,
+                min_len_mode=0,
+            )
+
+            warr_d_tail_bias_p = self.connect_to_tracks(
+                [tail_bias_p['d'], bias_p['s']],
+                tid_d_tail_bias,
+                min_len_mode=0,
+            )
+
+            warr_enb_horz = self.connect_to_tracks(
+                [enb_n['g'], enb_p['g']],
+                tid_enb_horz,
+                min_len_mode=0,
+            )
+
+            tid_enb_vert = TrackID(
+                layer_id=vert_conn_layer,
+                track_idx=self.grid.coord_to_nearest_track(
+                    layer_id=vert_conn_layer,
+                    coord=warr_enb_horz.lower_unit,
+                    mode=0,
+                    unit_mode=True,
+                ),
+                width=tr_manager.get_width(vert_conn_layer, 'sig')
+            )
+
+            warr_enb_vert = self.connect_to_tracks(
+                [warr_enb_horz],
+                tid_enb_vert,
+                track_lower=self.bound_box.bottom_unit,
+                min_len_mode=0,
+            )
+
+            warr_vdd_n_horz = self.connect_to_tracks(
+                [tail_bias_n['g']],
+                tid_vdd_horz,
+                min_len_mode=0,
+            )
+
+            warr_vdd_p_horz = self.connect_to_tracks(
+                [tail_bias_p['g']],
+                tid_vdd_horz,
+                min_len_mode=0,
+            )
+
+            tid_vdd_n_vert = TrackID(
+                layer_id=vert_conn_layer,
+                track_idx=self.grid.coord_to_nearest_track(
+                    layer_id=vert_conn_layer,
+                    coord=warr_vdd_n_horz.middle_unit,
+                    mode=0,
+                    unit_mode=True,
+                ),
+                width=tr_manager.get_width(vert_conn_layer, 'sig')
+            )
+
+            tid_vdd_p_vert = TrackID(
+                layer_id=vert_conn_layer,
+                track_idx=self.grid.coord_to_nearest_track(
+                    layer_id=vert_conn_layer,
+                    coord=warr_vdd_p_horz.middle_unit,
+                    mode=0,
+                    unit_mode=True,
+                ),
+                width=tr_manager.get_width(vert_conn_layer, 'sig')
+            )
+
+
+
         ################################################################################
         # 8:  Connections to substrate, and dummy fill
         #
@@ -1068,7 +1278,9 @@ class DoubleTailSenseAmplifier(AnalogBase):
         # Connections to VSS
         self.connect_to_substrate(
             'ptap',
-            [tail_1['s'], tail_2['s'], reset_p['s'], reset_n['s']]
+            [tail_1['s'], tail_2['s'], reset_p['s'], reset_n['s']] +
+            ([tail_oc_1['s'], tail_oc_2['s'], tail_bias_n['s'], tail_bias_p['s'], enb_n['s'], enb_p['s']]
+             if offset_correction else [])
         )
 
         # Connections to VDD
@@ -1078,6 +1290,20 @@ class DoubleTailSenseAmplifier(AnalogBase):
         )
 
         warr_vss, warr_vdd = self.fill_dummy()
+
+        if offset_correction:
+
+            warr_vdd_n_vert = self.connect_to_tracks(
+                [warr_vdd_n_horz, warr_vdd[0]],
+                tid_vdd_n_vert,
+                min_len_mode=0,
+            )
+
+            warr_vdd_p_vert = self.connect_to_tracks(
+                [warr_vdd_p_horz, warr_vdd[0]],
+                tid_vdd_p_vert,
+                min_len_mode=0,
+            )
 
         ################################################################################
         # 9:  Add pins
@@ -1093,6 +1319,11 @@ class DoubleTailSenseAmplifier(AnalogBase):
         self.add_pin('VON', warr_out_n_horz, show=show_pins)
         self.add_pin('DIP', warr_d_p, show=show_pins)
         self.add_pin('DIN', warr_d_n, show=show_pins)
+
+        if offset_correction:
+            self.add_pin('ENB_OC', warr_enb_vert, show=show_pins)
+            self.add_pin('IBIAS_N', warr_ibias_n, show=show_pins)
+            self.add_pin('IBIAS_P', warr_ibias_p, show=show_pins)
 
         ################################################################################
         # 10:  Organize parameters for the schematic generator
@@ -1113,4 +1344,5 @@ class DoubleTailSenseAmplifier(AnalogBase):
             lch=lch,
             dum_info=self.get_sch_dummy_info(),
             tx_info=tx_info,
+            offset_correction=offset_correction,
         )
